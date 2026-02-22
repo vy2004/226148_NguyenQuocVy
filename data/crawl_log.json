@@ -1,0 +1,904 @@
+{
+  "crawled_urls": [
+    {
+      "url": "https://vi.wikipedia.org/wiki/Hi%E1%BB%87p_%C4%91%E1%BB%8Bnh_Gen%C3%A8ve_1954",
+      "title": "Hiệp định Genève 1954",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T00:29:31.840243"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/H%E1%BB%93_Ch%C3%AD_Minh",
+      "title": "Hồ Chí Minh",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T00:29:31.850799"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Chi%E1%BA%BFn_tranh_Vi%E1%BB%87t_Nam",
+      "title": "Chiến tranh Việt Nam",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T00:29:31.860969"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/H%C3%A0_N%E1%BB%99i",
+      "title": "Hà Nội",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T00:30:28.294901"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Truy%E1%BB%81n_thuy%E1%BA%BFt",
+      "title": "Truyền thuyết",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T00:30:28.302141"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Quang_Trung",
+      "title": "Quang Trung",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T00:30:28.346031"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Hi%E1%BB%87p_%C4%91%E1%BB%8Bnh_Paris_1973",
+      "title": "Hiệp định Paris 1973",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T00:34:20.403057"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Nguy%E1%BB%85n_Th%E1%BB%8B_B%C3%ACnh",
+      "title": "Nguyễn Thị Bình",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T00:34:59.337041"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Th%C3%A1nh_Gi%C3%B3ng",
+      "title": "Thánh Gióng",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T00:36:08.513594"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/H%E1%BB%99i_Gi%C3%B3ng",
+      "title": "Hội Gióng",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T00:36:08.537536"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/%C4%90%E1%BB%81n_Ph%C3%B9_%C4%90%E1%BB%95ng",
+      "title": "Đền Phù Đổng",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T00:36:08.579945"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Hoa_K%E1%BB%B3",
+      "title": "Hoa Kỳ",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T00:43:20.729853"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/N%E1%BB%99i_chi%E1%BA%BFn_Hoa_K%E1%BB%B3",
+      "title": "Nội chiến Hoa Kỳ",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T00:43:20.767564"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/S%E1%BB%B1_ki%E1%BB%87n_30_th%C3%A1ng_4_n%C4%83m_1975",
+      "title": "Sự kiện 30 tháng 4 năm 1975",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T00:44:15.145123"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/S%E1%BB%B1_ki%E1%BB%87n_n%C4%83m_1956_%E1%BB%9F_Hungary",
+      "title": "Sự kiện năm 1956 ở Hungary",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T00:44:15.174308"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Nh%E1%BA%ADt_B%E1%BA%A3n_%C4%91%E1%BA%A7u_h%C3%A0ng",
+      "title": "Nhật Bản đầu hàng",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T00:44:15.210831"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Ng%C3%A0y_Valentine",
+      "title": "Ngày Valentine",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T00:45:15.869674"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/C%C3%A1c_ng%C3%A0y_l%E1%BB%85_%E1%BB%9F_Vi%E1%BB%87t_Nam",
+      "title": "Các ngày lễ ở Việt Nam",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T00:45:15.909325"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/C%C3%A1c_ng%C3%A0y_ngh%E1%BB%89_l%E1%BB%85_%E1%BB%9F_Nh%E1%BA%ADt_B%E1%BA%A3n",
+      "title": "Các ngày nghỉ lễ ở Nhật Bản",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T00:45:15.945243"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Chi%E1%BA%BFn_tranh_bi%C3%AAn_gi%E1%BB%9Bi_Vi%E1%BB%87t_Nam_%E2%80%93_Campuchia",
+      "title": "Chiến tranh biên giới Việt Nam – Campuchia",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:03:07.391120"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Chi%E1%BA%BFn_tranh_bi%C3%AAn_gi%E1%BB%9Bi_Vi%E1%BB%87t_%E2%80%93_Trung_1979",
+      "title": "Chiến tranh biên giới Việt – Trung 1979",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:03:07.440601"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Chi%E1%BA%BFn_tranh_%C4%90%C3%B4ng_D%C6%B0%C6%A1ng",
+      "title": "Chiến tranh Đông Dương",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:05:30.211763"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Th%E1%BB%9Di_%C4%91%E1%BA%A1i_qu%C3%A2n_phi%E1%BB%87t",
+      "title": "Thời đại quân phiệt",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:05:30.252521"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Nam_B%E1%BB%99_kh%C3%A1ng_chi%E1%BA%BFn",
+      "title": "Nam Bộ kháng chiến",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:08:15.663096"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Tr%E1%BA%ADn_Th%C3%A0nh_c%E1%BB%95_Qu%E1%BA%A3ng_Tr%E1%BB%8B",
+      "title": "Trận Thành cổ Quảng Trị",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:14:32.024889"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Th%C3%A0nh_c%E1%BB%95_Qu%E1%BA%A3ng_Tr%E1%BB%8B",
+      "title": "Thành cổ Quảng Trị",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:14:32.082519"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Tr%E1%BA%ADn_B%E1%BA%AFc_Ninh_(1884)",
+      "title": "Trận Bắc Ninh (1884)",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:14:32.146388"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Ng%C3%A0y",
+      "title": "Ngày",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:15:05.708034"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Ng%C3%A0y_Tr%C3%A1i_%C4%90%E1%BA%A5t",
+      "title": "Ngày Trái Đất",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:15:05.740628"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/V%C4%83n_Lang",
+      "title": "Văn Lang",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:20:46.651914"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/%C3%82u_L%E1%BA%A1c",
+      "title": "Âu Lạc",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:20:50.018801"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/H%C3%B9ng_V%C6%B0%C6%A1ng",
+      "title": "Hùng Vương",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:20:52.920042"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/An_D%C6%B0%C6%A1ng_V%C6%B0%C6%A1ng",
+      "title": "An Dương Vương",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:20:56.476201"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/N%E1%BB%8F_li%C3%AAn_ch%C3%A2u",
+      "title": "Nỏ liên châu",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:21:01.771033"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Tr%E1%BB%91ng_%C4%91%E1%BB%93ng_%C4%90%C3%B4ng_S%C6%A1n",
+      "title": "Trống đồng Đông Sơn",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:21:04.611892"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/V%C4%83n_h%C3%B3a_%C4%90%C3%B4ng_S%C6%A1n",
+      "title": "Văn hóa Đông Sơn",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:21:07.749849"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/V%C4%83n_h%C3%B3a_Sa_Hu%E1%BB%B3nh",
+      "title": "Văn hóa Sa Huỳnh",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:21:10.586622"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/S%C6%A1n_Tinh_%E2%80%93_Th%E1%BB%A7y_Tinh",
+      "title": "Sơn Tinh – Thủy Tinh",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:21:16.178495"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/L%E1%BA%A1c_Long_Qu%C3%A2n",
+      "title": "Lạc Long Quân",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:21:19.251193"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Th%E1%BB%9Di_k%E1%BB%B3_B%E1%BA%AFc_thu%E1%BB%99c_l%E1%BA%A7n_th%E1%BB%A9_nh%E1%BA%A5t",
+      "title": "Thời kỳ Bắc thuộc lần thứ nhất",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:21:28.341858"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/B%E1%BA%AFc_thu%E1%BB%99c",
+      "title": "Bắc thuộc",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:21:31.643334"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Th%E1%BB%9Di_k%E1%BB%B3_B%E1%BA%AFc_thu%E1%BB%99c_l%E1%BA%A7n_th%E1%BB%A9_t%C6%B0",
+      "title": "Thời kỳ Bắc thuộc lần thứ tư",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:21:37.679678"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Hai_B%C3%A0_Tr%C6%B0ng",
+      "title": "Hai Bà Trưng",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:21:40.429744"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Kh%E1%BB%9Fi_ngh%C4%A9a_Hai_B%C3%A0_Tr%C6%B0ng",
+      "title": "Khởi nghĩa Hai Bà Trưng",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:21:43.325960"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/B%C3%A0_Tri%E1%BB%87u",
+      "title": "Bà Triệu",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:21:46.696322"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Nh%C3%A0_Ti%E1%BB%81n_L%C3%BD",
+      "title": "Nhà Tiền Lý",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:21:55.169212"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Tri%E1%BB%87u_Vi%E1%BB%87t_V%C6%B0%C6%A1ng",
+      "title": "Triệu Việt Vương",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:21:58.536099"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Mai_H%E1%BA%AFc_%C4%90%E1%BA%BF",
+      "title": "Mai Hắc Đế",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:22:02.419764"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Ph%C3%B9ng_H%C6%B0ng",
+      "title": "Phùng Hưng",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:22:05.217907"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Kh%C3%BAc_Th%E1%BB%ABa_D%E1%BB%A5",
+      "title": "Khúc Thừa Dụ",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:22:14.502956"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/D%C6%B0%C6%A1ng_%C4%90%C3%ACnh_Ngh%E1%BB%87",
+      "title": "Dương Đình Nghệ",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:22:17.116116"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Ng%C3%B4_Quy%E1%BB%81n",
+      "title": "Ngô Quyền",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:22:20.130519"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Tr%E1%BA%ADn_B%E1%BA%A1ch_%C4%90%E1%BA%B1ng_(938)",
+      "title": "Trận Bạch Đằng (938)",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:22:22.916455"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Nh%C3%A0_Ng%C3%B4",
+      "title": "Nhà Ngô",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:22:25.723778"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Lo%E1%BA%A1n_12_s%E1%BB%A9_qu%C3%A2n",
+      "title": "Loạn 12 sứ quân",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:22:29.274888"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/%C4%90inh_Ti%C3%AAn_Ho%C3%A0ng",
+      "title": "Đinh Tiên Hoàng",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:22:33.269757"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Nh%C3%A0_%C4%90inh",
+      "title": "Nhà Đinh",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:22:37.285110"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/L%C3%AA_%C4%90%E1%BA%A1i_H%C3%A0nh",
+      "title": "Lê Đại Hành",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:22:41.754609"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Nh%C3%A0_Ti%E1%BB%81n_L%C3%AA",
+      "title": "Nhà Tiền Lê",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:22:45.706620"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Nh%C3%A0_L%C3%BD",
+      "title": "Nhà Lý",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:23:02.458945"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/L%C3%BD_Th%C3%A1i_T%E1%BB%95",
+      "title": "Lý Thái Tổ",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:23:05.583993"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/L%C3%BD_Th%C6%B0%E1%BB%9Dng_Ki%E1%BB%87t",
+      "title": "Lý Thường Kiệt",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:23:10.366926"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Tr%E1%BA%ADn_Nh%C6%B0_Nguy%E1%BB%87t",
+      "title": "Trận Như Nguyệt",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:23:13.240320"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Nh%C3%A0_Tr%E1%BA%A7n",
+      "title": "Nhà Trần",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:23:18.260045"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Tr%E1%BA%A7n_Th%C3%A1i_T%C3%B4ng",
+      "title": "Trần Thái Tông",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:23:21.737821"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Tr%E1%BA%A7n_H%C6%B0ng_%C4%90%E1%BA%A1o",
+      "title": "Trần Hưng Đạo",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:23:24.867037"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Chi%E1%BA%BFn_tranh_Nguy%C3%AAn_M%C3%B4ng_%E2%80%93_%C4%90%E1%BA%A1i_Vi%E1%BB%87t",
+      "title": "Chiến tranh Nguyên Mông – Đại Việt",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:23:30.740713"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Tr%E1%BA%ADn_B%E1%BA%A1ch_%C4%90%E1%BA%B1ng_(1288)",
+      "title": "Trận Bạch Đằng (1288)",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:23:33.561587"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/H%E1%BB%8Bch_t%C6%B0%E1%BB%9Bng_s%C4%A9",
+      "title": "Hịch tướng sĩ",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:23:36.342255"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Nh%C3%A0_H%E1%BB%93",
+      "title": "Nhà Hồ",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:23:58.316476"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/H%E1%BB%93_Qu%C3%BD_Ly",
+      "title": "Hồ Quý Ly",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:24:02.386514"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Kh%E1%BB%9Fi_ngh%C4%A9a_Lam_S%C6%A1n",
+      "title": "Khởi nghĩa Lam Sơn",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:24:06.042861"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/L%C3%AA_Th%C3%A1i_T%E1%BB%95",
+      "title": "Lê Thái Tổ",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:24:10.582085"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Nguy%E1%BB%85n_Tr%C3%A3i",
+      "title": "Nguyễn Trãi",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:24:16.939818"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/B%C3%ACnh_Ng%C3%B4_%C4%91%E1%BA%A1i_c%C3%A1o",
+      "title": "Bình Ngô đại cáo",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:24:20.069041"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Nh%C3%A0_H%E1%BA%ADu_L%C3%AA",
+      "title": "Nhà Hậu Lê",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:24:22.696166"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/L%C3%AA_Th%C3%A1nh_T%C3%B4ng",
+      "title": "Lê Thánh Tông",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:24:27.975529"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Nh%C3%A0_M%E1%BA%A1c",
+      "title": "Nhà Mạc",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:24:30.856947"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Tr%E1%BB%8Bnh_%E2%80%93_Nguy%E1%BB%85n_ph%C3%A2n_tranh",
+      "title": "Trịnh – Nguyễn phân tranh",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:24:33.880948"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Ch%C3%BAa_Tr%E1%BB%8Bnh",
+      "title": "Chúa Trịnh",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:25:03.266518"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Ch%C3%BAa_Nguy%E1%BB%85n",
+      "title": "Chúa Nguyễn",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:25:07.274653"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Nh%C3%A0_T%C3%A2y_S%C6%A1n",
+      "title": "Nhà Tây Sơn",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:25:12.918854"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Tr%E1%BA%ADn_R%E1%BA%A1ch_G%E1%BA%A7m_%E2%80%93_Xo%C3%A0i_M%C3%BAt",
+      "title": "Trận Rạch Gầm – Xoài Mút",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:25:22.839677"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Tr%E1%BA%ADn_Ng%E1%BB%8Dc_H%E1%BB%93i_%E2%80%93_%C4%90%E1%BB%91ng_%C4%90a",
+      "title": "Trận Ngọc Hồi – Đống Đa",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:25:25.969682"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Nh%C3%A0_Nguy%E1%BB%85n",
+      "title": "Nhà Nguyễn",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:25:29.808185"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Gia_Long",
+      "title": "Gia Long",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:25:33.782064"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Minh_M%E1%BA%A1ng",
+      "title": "Minh Mạng",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:25:38.060517"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/T%E1%BB%B1_%C4%90%E1%BB%A9c",
+      "title": "Tự Đức",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:25:41.936109"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Quan_h%E1%BB%87_Ph%C3%A1p_%E2%80%93_Vi%E1%BB%87t_Nam",
+      "title": "Quan hệ Pháp – Việt Nam",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:25:45.102245"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Tr%E1%BA%ADn_%C4%90%C3%A0_N%E1%BA%B5ng_(1858%E2%80%931859)",
+      "title": "Trận Đà Nẵng (1858–1859)",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:26:27.616188"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/H%C3%B2a_%C6%B0%E1%BB%9Bc_Nh%C3%A2m_Tu%E1%BA%A5t_(1862)",
+      "title": "Hòa ước Nhâm Tuất (1862)",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:26:30.373883"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/H%C3%B2a_%C6%B0%E1%BB%9Bc_Gi%C3%A1p_Tu%E1%BA%A5t_(1874)",
+      "title": "Hòa ước Giáp Tuất (1874)",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:26:32.985870"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/H%C3%B2a_%C6%B0%E1%BB%9Bc_Gi%C3%A1p_Th%C3%A2n_(1884)",
+      "title": "Hòa ước Giáp Thân (1884)",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:26:35.469248"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Phong_tr%C3%A0o_C%E1%BA%A7n_V%C6%B0%C6%A1ng",
+      "title": "Phong trào Cần Vương",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:26:38.268624"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/T%C3%B4n_Th%E1%BA%A5t_Thuy%E1%BA%BFt",
+      "title": "Tôn Thất Thuyết",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:26:43.499274"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/H%C3%A0m_Nghi",
+      "title": "Hàm Nghi",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:26:46.981904"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Kh%E1%BB%9Fi_ngh%C4%A9a_H%C6%B0%C6%A1ng_Kh%C3%AA",
+      "title": "Khởi nghĩa Hương Khê",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:26:49.847164"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Phan_%C4%90%C3%ACnh_Ph%C3%B9ng",
+      "title": "Phan Đình Phùng",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:26:52.884651"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Kh%E1%BB%9Fi_ngh%C4%A9a_Y%C3%AAn_Th%E1%BA%BF",
+      "title": "Khởi nghĩa Yên Thế",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:26:56.172414"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Ho%C3%A0ng_Hoa_Th%C3%A1m",
+      "title": "Hoàng Hoa Thám",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:27:09.354076"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/%C4%90%C3%B4ng_Kinh_Ngh%C4%A9a_Th%E1%BB%A5c",
+      "title": "Đông Kinh Nghĩa Thục",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:27:12.525076"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Phan_B%E1%BB%99i_Ch%C3%A2u",
+      "title": "Phan Bội Châu",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:27:17.137780"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Phan_Ch%C3%A2u_Trinh",
+      "title": "Phan Châu Trinh",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:27:21.059245"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Phong_tr%C3%A0o_%C4%90%C3%B4ng_Du",
+      "title": "Phong trào Đông Du",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:27:23.858073"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/%C4%90%E1%BA%A3ng_C%E1%BB%99ng_s%E1%BA%A3n_Vi%E1%BB%87t_Nam",
+      "title": "Đảng Cộng sản Việt Nam",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:27:27.085073"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/X%C3%B4_Vi%E1%BA%BFt_Ngh%E1%BB%87_T%C4%A9nh",
+      "title": "Xô Viết Nghệ Tĩnh",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:27:33.343564"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Vi%E1%BB%87t_Minh",
+      "title": "Việt Minh",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:27:38.003055"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/C%C3%A1ch_m%E1%BA%A1ng_Th%C3%A1ng_T%C3%A1m",
+      "title": "Cách mạng Tháng Tám",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:27:41.791024"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Tuy%C3%AAn_ng%C3%B4n_%C4%91%E1%BB%99c_l%E1%BA%ADp_(Vi%E1%BB%87t_Nam_D%C3%A2n_ch%E1%BB%A7_C%E1%BB%99ng_h%C3%B2a)",
+      "title": "Tuyên ngôn độc lập (Việt Nam Dân chủ Cộng hòa)",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:27:45.248803"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Chi%E1%BA%BFn_d%E1%BB%8Bch_Vi%E1%BB%87t_B%E1%BA%AFc",
+      "title": "Chiến dịch Việt Bắc",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:28:05.612281"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Chi%E1%BA%BFn_d%E1%BB%8Bch_Bi%C3%AAn_gi%E1%BB%9Bi",
+      "title": "Chiến dịch Biên giới",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:28:10.035482"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Chi%E1%BA%BFn_d%E1%BB%8Bch_%C4%90i%E1%BB%87n_Bi%C3%AAn_Ph%E1%BB%A7",
+      "title": "Chiến dịch Điện Biên Phủ",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:28:13.824217"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/V%C3%B5_Nguy%C3%AAn_Gi%C3%A1p",
+      "title": "Võ Nguyên Giáp",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:28:19.966986"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Ng%C3%B4_%C4%90%C3%ACnh_Di%E1%BB%87m",
+      "title": "Ngô Đình Diệm",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:28:30.510364"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Vi%E1%BB%87t_Nam_C%E1%BB%99ng_h%C3%B2a",
+      "title": "Việt Nam Cộng hòa",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:28:35.953732"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/M%E1%BA%B7t_tr%E1%BA%ADn_D%C3%A2n_t%E1%BB%99c_Gi%E1%BA%A3i_ph%C3%B3ng_mi%E1%BB%81n_Nam_Vi%E1%BB%87t_Nam",
+      "title": "Mặt trận Dân tộc Giải phóng miền Nam Việt Nam",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:28:40.220142"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Phong_tr%C3%A0o_%C4%90%E1%BB%93ng_kh%E1%BB%9Fi",
+      "title": "Phong trào Đồng khởi",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:28:46.348847"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Tr%E1%BA%ADn_%E1%BA%A4p_B%E1%BA%AFc",
+      "title": "Trận Ấp Bắc",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:28:49.756796"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/S%E1%BB%B1_ki%E1%BB%87n_V%E1%BB%8Bnh_B%E1%BA%AFc_B%E1%BB%99",
+      "title": "Sự kiện Vịnh Bắc Bộ",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:28:52.926132"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Chi%E1%BA%BFn_d%E1%BB%8Bch_T%C3%A2y_Nguy%C3%AAn",
+      "title": "Chiến dịch Tây Nguyên",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:29:37.634957"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/%C4%90%C6%B0%E1%BB%9Dng_Tr%C6%B0%E1%BB%9Dng_S%C6%A1n",
+      "title": "Đường Trường Sơn",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:29:41.053389"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Ch%E1%BA%A5t_%C4%91%E1%BB%99c_da_cam",
+      "title": "Chất độc da cam",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:29:50.632083"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/S%E1%BB%B1_ki%E1%BB%87n_T%E1%BA%BFt_M%E1%BA%ADu_Th%C3%A2n",
+      "title": "Sự kiện Tết Mậu Thân",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:29:55.294102"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Th%E1%BA%A3m_s%C3%A1t_M%E1%BB%B9_Lai",
+      "title": "Thảm sát Mỹ Lai",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:29:59.197156"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Chi%E1%BA%BFn_d%E1%BB%8Bch_Linebacker_II",
+      "title": "Chiến dịch Linebacker II",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:30:02.581564"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Chi%E1%BA%BFn_d%E1%BB%8Bch_H%E1%BB%93_Ch%C3%AD_Minh",
+      "title": "Chiến dịch Hồ Chí Minh",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:30:13.145098"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Vi%E1%BB%87t_Nam",
+      "title": "Việt Nam",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:30:19.880510"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/L%C3%AA_Du%E1%BA%A9n",
+      "title": "Lê Duẩn",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:30:23.426089"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Ph%E1%BA%A1m_V%C4%83n_%C4%90%E1%BB%93ng",
+      "title": "Phạm Văn Đồng",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:30:27.288769"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Tr%C6%B0%E1%BB%9Dng_Chinh",
+      "title": "Trường Chinh",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:31:09.996391"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Nguy%E1%BB%85n_V%C4%83n_Thi%E1%BB%87u",
+      "title": "Nguyễn Văn Thiệu",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:31:16.552708"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/%C4%90%E1%BB%95i_M%E1%BB%9Bi",
+      "title": "Đổi Mới",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:31:26.852349"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Kinh_t%E1%BA%BF_Vi%E1%BB%87t_Nam",
+      "title": "Kinh tế Việt Nam",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:31:32.981308"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Nguy%E1%BB%85n_V%C4%83n_Linh",
+      "title": "Nguyễn Văn Linh",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:31:37.063011"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Phan_V%C4%83n_Kh%E1%BA%A3i",
+      "title": "Phan Văn Khải",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:31:40.501629"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Nguy%E1%BB%85n_Th%E1%BB%8B_Minh_Khai",
+      "title": "Nguyễn Thị Minh Khai",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:32:19.186017"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/T%C3%B4n_%C4%90%E1%BB%A9c_Th%E1%BA%AFng",
+      "title": "Tôn Đức Thắng",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:32:22.864285"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Ph%E1%BA%A1m_Ng%E1%BB%8Dc_Th%E1%BA%A1ch",
+      "title": "Phạm Ngọc Thạch",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:32:26.316120"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Nguy%E1%BB%85n_V%C4%83n_Tr%E1%BB%97i",
+      "title": "Nguyễn Văn Trỗi",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:32:29.131219"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Ho%C3%A0ng_th%C3%A0nh_Th%C4%83ng_Long",
+      "title": "Hoàng thành Thăng Long",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:32:55.523958"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/C%E1%BB%91_%C4%91%C3%B4_Hu%E1%BA%BF",
+      "title": "Cố đô Huế",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:32:58.513069"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/%C4%90%E1%BB%8Ba_%C4%91%E1%BA%A1o_C%E1%BB%A7_Chi",
+      "title": "Địa đạo Củ Chi",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:33:01.812619"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Nh%C3%A0_t%C3%B9_C%C3%B4n_%C4%90%E1%BA%A3o",
+      "title": "Nhà tù Côn Đảo",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:33:05.104135"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Nh%C3%A0_t%C3%B9_H%E1%BB%8Fa_L%C3%B2",
+      "title": "Nhà tù Hỏa Lò",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:33:08.391193"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Th%C3%A0nh_nh%C3%A0_H%E1%BB%93",
+      "title": "Thành nhà Hồ",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:33:12.351486"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Th%C3%A1nh_%C4%91%E1%BB%8Ba_M%E1%BB%B9_S%C6%A1n",
+      "title": "Thánh địa Mỹ Sơn",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:33:16.115007"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Khu_di_t%C3%ADch_P%C3%A1c_B%C3%B3",
+      "title": "Khu di tích Pác Bó",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:33:19.051267"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Vi%E1%BB%87t_B%E1%BA%AFc",
+      "title": "Việt Bắc",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:33:22.106073"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Dinh_%C4%90%E1%BB%99c_L%E1%BA%ADp",
+      "title": "Dinh Độc Lập",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:33:24.781166"
+    },
+    {
+      "url": "https://vi.wikipedia.org/wiki/Trung_Qu%E1%BB%91c_trong_Chi%E1%BA%BFn_tranh_Vi%E1%BB%87t_Nam",
+      "title": "Trung Quốc trong Chiến tranh Việt Nam",
+      "source": "wikipedia",
+      "crawled_at": "2026-02-23T01:35:43.226894"
+    }
+  ]
+}
