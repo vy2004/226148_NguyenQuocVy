@@ -7,7 +7,7 @@ import os
 import uuid
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from rag_chain import HistoryChatbot
+from rag_chain_pg import ask_pg, clear_history_pg
 
 app = FastAPI(title="Chatbot Lịch Sử Việt Nam API")
 
@@ -20,7 +20,6 @@ app.add_middleware(
 )
 
 print("Đang khởi tạo chatbot...")
-chatbot = HistoryChatbot()
 print("✅ Chatbot đã sẵn sàng!")
 
 class ChatRequest(BaseModel):
@@ -42,17 +41,17 @@ async def chat(request: ChatRequest):
         raise HTTPException(status_code=400, detail="Câu hỏi không được để trống")
     
     session_id = request.session_id or str(uuid.uuid4())
-    result = chatbot.chat(request.message, session_id=session_id)
+    result = ask_pg(request.message, session_id=session_id)
     
     return ChatResponse(
         answer=result['answer'],
-        sources=result['sources'],
+        sources=result.get('sources', []),
         session_id=session_id
     )
 
 @app.post("/clear")
 async def clear_session(session_id: str = "default"):
-    chatbot.clear_session(session_id)
+    clear_history_pg(session_id)
     return {"message": f"Đã xóa lịch sử session: {session_id}"}
 
 if __name__ == "__main__":

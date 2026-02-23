@@ -11,10 +11,10 @@ def main():
     project_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     data_dir = os.path.join(project_dir, 'data', 'raw')
     processed_dir = os.path.join(project_dir, 'data', 'processed')
-    db_path = os.path.join(project_dir, 'chroma_db')
     
     print("=" * 60)
     print("  PIPELINE XỬ LÝ DỮ LIỆU LỊCH SỬ VIỆT NAM")
+    print("  (PostgreSQL Vector Store)")
     print("=" * 60)
     
     # BƯỚC 1
@@ -33,12 +33,12 @@ def main():
     save_chunks(chunks, chunks_path)
     
     # BƯỚC 3
-    print("\n🗄️ BƯỚC 3: Tạo Vector Database")
-    create_vector_database(chunks, db_path=db_path)
+    print("\n🗄️ BƯỚC 3: Index vào PostgreSQL")
+    create_vector_database(chunks)
     
     # BƯỚC 4
     print("\n🔍 BƯỚC 4: Test tìm kiếm")
-    test_search(db_path=db_path)
+    test_search()
     
     print("\n" + "=" * 60)
     print(f"✅ HOÀN TẤT! Tài liệu: {len(documents)} | Chunks: {len(chunks)}")

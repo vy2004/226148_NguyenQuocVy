@@ -10,9 +10,6 @@ __pycache__/
 *.py[cod]
 *.pyo
 
-# ChromaDB (dữ liệu vector - có thể tái tạo)
-chroma_db/
-
 # IDE
 .vscode/
 .idea/

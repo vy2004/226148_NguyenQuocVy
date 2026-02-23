@@ -31,9 +31,9 @@ class PgVectorStore:
         """Tạo các bảng cần thiết."""
         cur = self.conn.cursor()
 
-        # Bảng documents - lưu tài liệu + embedding dạng FLOAT[]
+        # Bảng tai_lieu_lich_su - lưu tài liệu + embedding dạng FLOAT[]
         cur.execute("""
-            CREATE TABLE IF NOT EXISTS documents (
+            CREATE TABLE IF NOT EXISTS tai_lieu_lich_su (
                 id SERIAL PRIMARY KEY,
                 title TEXT,
                 content TEXT NOT NULL,
@@ -48,18 +48,18 @@ class PgVectorStore:
         # Index cho tìm kiếm nhanh theo source
         cur.execute("""
             CREATE INDEX IF NOT EXISTS idx_documents_source
-            ON documents (source);
+            ON tai_lieu_lich_su (source);
         """)
 
         # Index cho content (tránh trùng lặp)
         cur.execute("""
             CREATE INDEX IF NOT EXISTS idx_documents_content_hash
-            ON documents (md5(content));
+            ON tai_lieu_lich_su (md5(content));
         """)
 
-        # Bảng chat_history
+        # Bảng lich_su_nhan_tin hay chat_history
         cur.execute("""
-            CREATE TABLE IF NOT EXISTS chat_history (
+            CREATE TABLE IF NOT EXISTS lich_su_nhan_tin (
                 id SERIAL PRIMARY KEY,
                 session_id TEXT NOT NULL,
                 user_message TEXT NOT NULL,
@@ -72,17 +72,17 @@ class PgVectorStore:
         # Index cho session_id
         cur.execute("""
             CREATE INDEX IF NOT EXISTS idx_chat_session
-            ON chat_history (session_id, created_at DESC);
+            ON lich_su_nhan_tin (session_id, created_at DESC);
         """)
 
-        # Bảng crawled_sources
+        # Bảng nguon_tai_lieu hay crawled_sources
         cur.execute("""
-            CREATE TABLE IF NOT EXISTS crawled_sources (
+            CREATE TABLE IF NOT EXISTS nguon_tai_lieu (
                 id SERIAL PRIMARY KEY,
-                url TEXT UNIQUE NOT NULL,
-                title TEXT,
-                source_type TEXT,
-                crawled_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                duong_dan_url TEXT UNIQUE NOT NULL,
+                ten_nguon TEXT,
+                loai_nguon TEXT,
+                ngay_cap_nhat TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
 
@@ -115,6 +115,50 @@ class PgVectorStore:
             $$ LANGUAGE plpgsql IMMUTABLE;
         """)
 
+
+        # Thêm cột tsvector cho Full-Text Search (Hybrid Search)
+        cur.execute("""
+            ALTER TABLE tai_lieu_lich_su
+            ADD COLUMN IF NOT EXISTS tsv_content tsvector;
+        """)
+
+        # Cập nhật tsvector cho dữ liệu cũ (nếu chưa có)
+        cur.execute("""
+            UPDATE tai_lieu_lich_su
+            SET tsv_content = to_tsvector('simple', content)
+            WHERE tsv_content IS NULL;
+        """)
+
+        # Index GIN cho tìm kiếm Full-Text nhanh
+        cur.execute("""
+            CREATE INDEX IF NOT EXISTS idx_documents_tsvector
+            ON tai_lieu_lich_su USING GIN(tsv_content);
+        """)
+
+        # Trigger tự động cập nhật tsvector khi thêm/sửa document
+        cur.execute("""
+            CREATE OR REPLACE FUNCTION update_tsv_content()
+            RETURNS TRIGGER AS $$
+            BEGIN
+                NEW.tsv_content := to_tsvector('simple', NEW.content);
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        """)
+
+        cur.execute("""
+            DO $$
+            BEGIN
+                IF NOT EXISTS (
+                    SELECT 1 FROM pg_trigger WHERE tgname = 'trg_update_tsv'
+                ) THEN
+                    CREATE TRIGGER trg_update_tsv
+                    BEFORE INSERT OR UPDATE ON tai_lieu_lich_su
+                    FOR EACH ROW
+                    EXECUTE FUNCTION update_tsv_content();
+                END IF;
+            END $$;
+        """)
         cur.close()
         print("✅ Đã tạo tables + cosine_similarity function")
 
@@ -157,7 +201,7 @@ class PgVectorStore:
 
                 # Kiểm tra trùng lặp
                 cur.execute("""
-                    SELECT id FROM documents
+                    SELECT id FROM tai_lieu_lich_su
                     WHERE md5(content) = md5(%s)
                     LIMIT 1
                 """, (chunk,))
@@ -170,7 +214,7 @@ class PgVectorStore:
 
                 # Insert
                 cur.execute("""
-                    INSERT INTO documents (title, content, source, url, chunk_index, embedding)
+                    INSERT INTO tai_lieu_lich_su (title, content, source, url, chunk_index, embedding)
                     VALUES (%s, %s, %s, %s, %s, %s)
                 """, (title, chunk, source, url, i, embedding.tolist()))
 
@@ -180,7 +224,7 @@ class PgVectorStore:
         print(f"📦 Đã thêm {added} chunks vào PostgreSQL")
         return added
 
-    def _split_text(self, text, chunk_size=500, overlap=50):
+    def _split_text(self, text, chunk_size=100, overlap=20):
         """Chia text thành chunks."""
         if not text:
             return []
@@ -195,27 +239,68 @@ class PgVectorStore:
             start = end - overlap
         return chunks
 
+    def _rrf_fusion(self, vector_results, text_results, k=60):
+        """Kết hợp kết quả bằng thuật toán Reciprocal Rank Fusion."""
+        scores = {}
+
+        # Tính điểm từ kết quả Vector
+        for rank, res in enumerate(vector_results):
+            doc_id = res['id']
+            scores[doc_id] = scores.get(doc_id, 0) + 1.0 / (k + rank + 1)
+
+        # Tính điểm từ kết quả Text Search
+        for rank, res in enumerate(text_results):
+            doc_id = res['id']
+            scores[doc_id] = scores.get(doc_id, 0) + 1.0 / (k + rank + 1)
+
+        # Sắp xếp lại theo điểm RRF
+        sorted_ids = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+
+        # Lấy thông tin chi tiết của các document đã được sắp xếp
+        final_results = []
+        all_docs = {d['id']: d for d in (vector_results + text_results)}
+
+        for doc_id, score in sorted_ids:
+            doc = all_docs[doc_id]
+            doc['rrf_score'] = score
+            final_results.append(doc)
+
+        return final_results
+
     def search(self, query, n_results=10, min_similarity=0.3):
-        """Tìm kiếm cosine similarity."""
+        """Tìm kiếm kết hợp Hybrid (Vector + Full-Text Search)."""
+        # 1. Lấy kết quả từ Vector Search
         query_embedding = self._embed(query)[0]
-
         cur = self.conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cur.execute("""
-            SELECT
-                id, title, content, source, url,
-                cosine_similarity(embedding, %s::FLOAT[]) AS similarity
-            FROM documents
-            WHERE array_length(embedding, 1) > 0
-            ORDER BY cosine_similarity(embedding, %s::FLOAT[]) DESC
-            LIMIT %s
-        """, (query_embedding.tolist(), query_embedding.tolist(), n_results))
 
-        results = cur.fetchall()
+        cur.execute("""
+            SELECT id, title, content, source, url,
+                   cosine_similarity(embedding, %s::FLOAT[]) AS similarity
+            FROM tai_lieu_lich_su
+            WHERE array_length(embedding, 1) > 0
+            ORDER BY similarity DESC
+            LIMIT %s
+        """, (query_embedding.tolist(), n_results * 2))
+        vector_results = cur.fetchall()
+
+        # 2. Lấy kết quả từ Full-Text Search
+        # Chuyển query thành định dạng tsquery (ví dụ: 'ngô & quyền')
+        keywords = " & ".join(query.split())
+        cur.execute("""
+            SELECT id, title, content, source, url,
+                   ts_rank(tsv_content, to_tsquery('simple', %s)) AS rank
+            FROM tai_lieu_lich_su
+            WHERE tsv_content @@ to_tsquery('simple', %s)
+            ORDER BY rank DESC
+            LIMIT %s
+        """, (keywords, keywords, n_results * 2))
+        text_results = cur.fetchall()
         cur.close()
 
-        # Lọc theo similarity threshold
-        filtered = [r for r in results if r["similarity"] and r["similarity"] >= min_similarity]
-        return filtered
+        # 3. Kết hợp bằng RRF
+        hybrid_results = self._rrf_fusion(vector_results, text_results)
+
+        return hybrid_results[:n_results]
 
     def get_context(self, question, n_results=10):
         """Query và trả về context + sources."""
@@ -229,13 +314,13 @@ class PgVectorStore:
 
         for i, r in enumerate(results):
             source = r["source"]
-            sim = r["similarity"] or 0
+            sim = r.get("rrf_score") or r.get("similarity") or 0
             if source not in sources:
                 sources.append(source)
             context_parts.append(
                 f"[Tài liệu {i+1} - {source}]:\n{r['content']}\n"
             )
-            print(f"  📄 {i+1}. {source} (sim={sim:.3f}) - {r['content'][:80]}...")
+            print(f"  📄 {i+1}. {source} (score={sim:.3f}) - {r['content'][:80]}...")
 
         context = "\n".join(context_parts)
         print(f"  📊 Tổng: {len(context)} ký tự từ {len(results)} chunks")
@@ -244,7 +329,7 @@ class PgVectorStore:
     def count_documents(self):
         """Đếm tổng số chunks."""
         cur = self.conn.cursor()
-        cur.execute("SELECT COUNT(*) FROM documents")
+        cur.execute("SELECT COUNT(*) FROM tai_lieu_lich_su")
         count = cur.fetchone()[0]
         cur.close()
         return count
@@ -257,7 +342,7 @@ class PgVectorStore:
         """Lưu lịch sử chat vào PostgreSQL."""
         cur = self.conn.cursor()
         cur.execute("""
-            INSERT INTO chat_history (session_id, user_message, bot_response, sources)
+            INSERT INTO lich_su_nhan_tin (session_id, user_message, bot_response, sources)
             VALUES (%s, %s, %s, %s)
         """, (session_id, user_message, bot_response, str(sources or [])))
         cur.close()
@@ -267,7 +352,7 @@ class PgVectorStore:
         cur = self.conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute("""
             SELECT user_message, bot_response
-            FROM chat_history
+            FROM lich_su_nhan_tin
             WHERE session_id = %s
             ORDER BY created_at DESC
             LIMIT %s
@@ -279,7 +364,7 @@ class PgVectorStore:
     def clear_chat_history(self, session_id):
         """Xóa lịch sử chat."""
         cur = self.conn.cursor()
-        cur.execute("DELETE FROM chat_history WHERE session_id = %s", (session_id,))
+        cur.execute("DELETE FROM lich_su_nhan_tin WHERE session_id = %s", (session_id,))
         cur.close()
 
     # =====================================================
@@ -289,7 +374,7 @@ class PgVectorStore:
     def is_crawled(self, url):
         """Kiểm tra URL đã crawl chưa."""
         cur = self.conn.cursor()
-        cur.execute("SELECT id FROM crawled_sources WHERE url = %s", (url,))
+        cur.execute("SELECT id FROM nguon_tai_lieu WHERE duong_dan_url = %s", (url,))
         result = cur.fetchone()
         cur.close()
         return result is not None
@@ -298,9 +383,9 @@ class PgVectorStore:
         """Đánh dấu URL đã crawl."""
         cur = self.conn.cursor()
         cur.execute("""
-            INSERT INTO crawled_sources (url, title, source_type)
+            INSERT INTO nguon_tai_lieu (duong_dan_url, ten_nguon, loai_nguon)
             VALUES (%s, %s, %s)
-            ON CONFLICT (url) DO NOTHING
+            ON CONFLICT (duong_dan_url) DO NOTHING
         """, (url, title, source_type))
         cur.close()
 
@@ -312,21 +397,21 @@ class PgVectorStore:
         """Thống kê database."""
         cur = self.conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
-        cur.execute("SELECT COUNT(*) as total FROM documents")
+        cur.execute("SELECT COUNT(*) as total FROM tai_lieu_lich_su")
         total_chunks = cur.fetchone()["total"]
 
-        cur.execute("SELECT COUNT(DISTINCT source) as total FROM documents")
+        cur.execute("SELECT COUNT(DISTINCT source) as total FROM tai_lieu_lich_su")
         total_sources = cur.fetchone()["total"]
 
-        cur.execute("SELECT COUNT(*) as total FROM crawled_sources")
+        cur.execute("SELECT COUNT(*) as total FROM nguon_tai_lieu")
         total_crawled = cur.fetchone()["total"]
 
-        cur.execute("SELECT COUNT(*) as total FROM chat_history")
+        cur.execute("SELECT COUNT(*) as total FROM lich_su_nhan_tin")
         total_chats = cur.fetchone()["total"]
 
         cur.execute("""
             SELECT source, COUNT(*) as chunks
-            FROM documents
+            FROM tai_lieu_lich_su
             GROUP BY source
             ORDER BY chunks DESC
             LIMIT 10

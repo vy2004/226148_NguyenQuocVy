@@ -1,77 +1,83 @@
-import chromadb
-import os
-import json
+"""
+Tạo index trong PostgreSQL từ danh sách chunks.
+"""
 import sys
+import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "backend"))
 
-def create_vector_database(chunks, db_path="chroma_db", collection_name="vietnam_history"):
-    print("Đang khởi tạo ChromaDB...")
-    
-    client = chromadb.PersistentClient(path=db_path)
-    
-    try:
-        client.delete_collection(name=collection_name)
-        print(f"Đã xóa collection cũ: {collection_name}")
-    except:
-        pass
-    
-    collection = client.create_collection(
-        name=collection_name,
-        metadata={"hnsw:space": "cosine"}
-    )
-    
-    print(f"Đang thêm {len(chunks)} chunks vào vector database...")
-    
-    batch_size = 100
-    for i in range(0, len(chunks), batch_size):
-        batch = chunks[i:i + batch_size]
-        
-        ids = [f"chunk_{i + j}" for j in range(len(batch))]
-        documents = [chunk['text'] for chunk in batch]
-        metadatas = [chunk['metadata'] for chunk in batch]
-        
-        collection.add(ids=ids, documents=documents, metadatas=metadatas)
-        print(f"  Đã thêm batch {i // batch_size + 1}: {len(batch)} chunks")
-    
-    total = collection.count()
-    print(f"\nHoàn tất! Tổng số chunks trong database: {total}")
-    return collection
+from pg_vector_store import PgVectorStore
 
-def test_search(db_path="chroma_db", collection_name="vietnam_history"):
-    client = chromadb.PersistentClient(path=db_path)
-    collection = client.get_collection(name=collection_name)
-    
+
+def create_vector_database(chunks):
+    """Index chunks vào PostgreSQL."""
+    print("Đang kết nối PostgreSQL...")
+    pg_store = PgVectorStore()
+
+    print(f"Đang thêm {len(chunks)} chunks vào PostgreSQL...")
+
+    # Chuyển chunks thành format phù hợp với PgVectorStore
+    docs = []
+    for chunk in chunks:
+        docs.append({
+            "title": chunk["metadata"].get("source", "Unknown"),
+            "content": chunk["text"],
+            "source": chunk["metadata"].get("source", "unknown"),
+            "url": "",
+        })
+
+    # Thêm theo batch
+    batch_size = 50
+    total_added = 0
+    for i in range(0, len(docs), batch_size):
+        batch = docs[i:i + batch_size]
+        added = pg_store.add_documents(batch)
+        total_added += added
+        print(f"  Đã xử lý batch {i // batch_size + 1}: +{added} chunks")
+
+    total = pg_store.count_documents()
+    print(f"\nHoàn tất! Tổng số chunks trong PostgreSQL: {total}")
+
+    pg_store.close()
+    return total_added
+
+
+def test_search():
+    """Test tìm kiếm trong PostgreSQL."""
+    pg_store = PgVectorStore()
+
     test_queries = [
         "Trận Bạch Đằng năm 938 diễn ra như thế nào?",
         "Ai là người sáng lập nhà Lý?",
         "Chiến dịch Điện Biên Phủ có ý nghĩa gì?",
     ]
-    
+
     print("\nTEST TÌM KIẾM:")
     for query in test_queries:
         print(f"\n📝 Câu hỏi: {query}")
-        results = collection.query(query_texts=[query], n_results=2)
-        
-        for j, (doc, meta, distance) in enumerate(zip(
-            results['documents'][0],
-            results['metadatas'][0],
-            results['distances'][0]
-        )):
-            print(f"  Kết quả {j+1} (similarity: {1-distance:.4f}):")
-            print(f"  Nguồn: {meta['source']}")
-            print(f"  Nội dung: {doc[:150]}...")
+        results = pg_store.search(query, n_results=2)
+
+        for j, r in enumerate(results):
+            score = r.get("rrf_score") or r.get("similarity") or 0
+            print(f"  Kết quả {j+1} (score: {score:.4f}):")
+            print(f"  Nguồn: {r['source']}")
+            print(f"  Nội dung: {r['content'][:150]}...")
+
+    pg_store.close()
+
 
 if __name__ == "__main__":
+    import json
+
     chunks_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'processed', 'chunks.json')
-    
+
     if not os.path.exists(chunks_path):
         print("Chưa có file chunks.json! Chạy chunking.py trước")
         exit(1)
-    
+
     with open(chunks_path, 'r', encoding='utf-8') as f:
         chunks = json.load(f)
-    
-    db_path = os.path.join(os.path.dirname(__file__), '..', 'chroma_db')
-    create_vector_database(chunks, db_path=db_path)
-    test_search(db_path=db_path)
+
+    create_vector_database(chunks)
+    test_search()
