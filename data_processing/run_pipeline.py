@@ -14,7 +14,7 @@ def main():
     
     print("=" * 60)
     print("  PIPELINE XỬ LÝ DỮ LIỆU LỊCH SỬ VIỆT NAM")
-    print("  (PostgreSQL Vector Store)")
+    print("  (ChromaDB Vector Store)")
     print("=" * 60)
     
     # BƯỚC 1
@@ -33,7 +33,7 @@ def main():
     save_chunks(chunks, chunks_path)
     
     # BƯỚC 3
-    print("\n🗄️ BƯỚC 3: Index vào PostgreSQL")
+    print("\n🗄️ BƯỚC 3: Index vào ChromaDB")
     create_vector_database(chunks)
     
     # BƯỚC 4

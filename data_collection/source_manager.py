@@ -1,59 +1,45 @@
 """
-Quản lý nguồn đã crawl, tránh crawl trùng, đánh giá độ tin cậy.
+Quản lý nguồn dữ liệu đã crawl - tránh crawl trùng lặp.
 """
-import json
+
 import os
-from datetime import datetime
+import json
 
-CRAWL_LOG_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "crawl_log.json")
+CRAWLED_FILE = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "data", "crawled_sources.json"
+)
 
-TRUSTED_DOMAINS = [
-    "vi.wikipedia.org",
-    "lichsuvietnam.vn",
-    "nghiencuulichsu.com",
-    "baotanglichsu.vn",
-    "vansudia.net",
-]
 
-def load_crawl_log() -> dict:
-    """Đọc log các URL đã crawl."""
-    if os.path.exists(CRAWL_LOG_PATH):
-        with open(CRAWL_LOG_PATH, "r", encoding="utf-8") as f:
+def _load_crawled():
+    """Đọc danh sách nguồn đã crawl."""
+    if os.path.exists(CRAWLED_FILE):
+        with open(CRAWLED_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
-    return {"crawled_urls": []}
+    return []
 
-def save_crawl_log(log: dict):
-    """Lưu log."""
-    os.makedirs(os.path.dirname(CRAWL_LOG_PATH), exist_ok=True)
-    with open(CRAWL_LOG_PATH, "w", encoding="utf-8") as f:
-        json.dump(log, f, ensure_ascii=False, indent=2)
 
-def is_already_crawled(url: str) -> bool:
-    """Kiểm tra URL đã crawl chưa."""
-    log = load_crawl_log()
-    return url in [entry["url"] for entry in log["crawled_urls"]]
+def _save_crawled(sources: list):
+    """Lưu danh sách nguồn đã crawl."""
+    os.makedirs(os.path.dirname(CRAWLED_FILE), exist_ok=True)
+    with open(CRAWLED_FILE, "w", encoding="utf-8") as f:
+        json.dump(sources, f, ensure_ascii=False, indent=2)
 
-def mark_as_crawled(url: str, title: str, source: str):
-    """Đánh dấu URL đã crawl xong."""
-    log = load_crawl_log()
-    log["crawled_urls"].append({
-        "url": url,
-        "title": title,
-        "source": source,
-        "crawled_at": datetime.now().isoformat()
-    })
-    save_crawl_log(log)
 
-def is_trusted_source(url: str) -> bool:
-    """Kiểm tra URL có thuộc nguồn uy tín không."""
-    return any(domain in url for domain in TRUSTED_DOMAINS)
+def is_already_crawled(title: str) -> bool:
+    """Kiểm tra xem nguồn đã được crawl chưa."""
+    sources = _load_crawled()
+    return title.lower() in [s.lower() for s in sources]
 
-def get_crawl_stats() -> dict:
-    """Thống kê số lượng đã crawl."""
-    log = load_crawl_log()
-    total = len(log["crawled_urls"])
-    by_source = {}
-    for entry in log["crawled_urls"]:
-        src = entry.get("source", "unknown")
-        by_source[src] = by_source.get(src, 0) + 1
-    return {"total": total, "by_source": by_source}
+
+def mark_as_crawled(title: str):
+    """Đánh dấu nguồn đã crawl."""
+    sources = _load_crawled()
+    if title not in sources:
+        sources.append(title)
+        _save_crawled(sources)
+
+
+def get_all_crawled() -> list:
+    """Lấy danh sách tất cả nguồn đã crawl."""
+    return _load_crawled()

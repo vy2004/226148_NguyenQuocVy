@@ -2,17 +2,16 @@
 Crawl hàng loạt tài liệu lịch sử Việt Nam từ Wikipedia.
 Chạy 1 lần để nạp kiến thức nền cho chatbot.
 """
-import sys
 import os
+import sys
 import time
 
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, ROOT_DIR)
 sys.path.insert(0, os.path.join(ROOT_DIR, "data_collection"))
 sys.path.insert(0, os.path.join(ROOT_DIR, "data_processing"))
-sys.path.insert(0, os.path.join(ROOT_DIR, "backend"))
 
-from wiki_crawler import search_wikipedia
+from wiki_crawler import search_wikipedia, save_wiki_to_raw
 from source_manager import is_already_crawled, mark_as_crawled
 from dynamic_indexing import add_new_documents
 
@@ -409,85 +408,66 @@ TOPICS = {
 
 
 
-def crawl_all_topics():
-    """Crawl toàn bộ chủ đề."""
-    total_docs = 0
-    total_added = 0
-    failed_topics = []
+def crawl_all():
+    """Crawl tất cả chủ đề lịch sử."""
+    print("=" * 60)
+    print("  CRAWL DỮ LIỆU LỊCH SỬ VIỆT NAM TỪ WIKIPEDIA")
+    print("  (Lưu vào ChromaDB)")
+    print("=" * 60)
 
-    # Đếm tổng số topic
-    all_topics = []
-    for category, topics in TOPICS.items():
-        for topic in topics:
-            all_topics.append((category, topic))
+    total_articles = 0
+    total_chunks = 0
+    skipped = 0
 
-    print(f"{'='*60}")
-    print(f"🚀 BẮT ĐẦU CRAWL {len(all_topics)} CHỦ ĐỀ LỊCH SỬ VIỆT NAM")
-    print(f"{'='*60}\n")
+    for i, topic in enumerate(TOPICS):
+        print(f"\n[{i+1}/{len(TOPICS)}] 📌 Chủ đề: {topic}")
 
-    batch_docs = []
-    batch_size = 10  # Index mỗi 10 docs
+        # Kiểm tra đã crawl chưa
+        if is_already_crawled(topic):
+            print(f"  ⏭️ Đã crawl trước đó, bỏ qua.")
+            skipped += 1
+            continue
 
-    for idx, (category, topic) in enumerate(all_topics):
-        progress = f"[{idx+1}/{len(all_topics)}]"
-        print(f"\n{progress} 📚 {category} → {topic}")
+        # Crawl từ Wikipedia
+        articles = search_wikipedia(topic, max_results=2)
 
-        try:
-            wiki_results = search_wikipedia(topic, max_results=1)
+        if not articles:
+            print(f"  ❌ Không tìm thấy bài viết nào.")
+            continue
 
-            for doc in wiki_results:
-                if is_already_crawled(doc["url"]):
-                    print(f"  ⏭️ Đã crawl: {doc['title']}")
-                    continue
+        # Lưu vào data/raw/
+        save_wiki_to_raw(articles)
 
-                batch_docs.append(doc)
-                mark_as_crawled(doc["url"], doc["title"], doc.get("source", "wikipedia"))
-                total_docs += 1
-                print(f"  ✅ {doc['title']} ({len(doc.get('content', ''))} chars)")
+        # Chuyển đổi thành documents và thêm vào ChromaDB
+        documents = []
+        for article in articles:
+            documents.append({
+                "content": article["content"],
+                "metadata": {
+                    "source": "wikipedia",
+                    "title": article["title"],
+                    "url": article.get("url", ""),
+                    "topic": topic
+                }
+            })
 
-            # Index theo batch
-            if len(batch_docs) >= batch_size:
-                try:
-                    added = add_new_documents(batch_docs)
-                    total_added += added
-                    print(f"\n  📦 Đã index batch: +{added} chunks (tổng: {total_added})")
-                    batch_docs = []
-                except Exception as e:
-                    print(f"  ❌ Lỗi index batch: {e}")
-                    batch_docs = []
+        chunks_added = add_new_documents(documents)
+        total_articles += len(articles)
+        total_chunks += chunks_added
 
-        except Exception as e:
-            print(f"  ❌ Lỗi: {e}")
-            failed_topics.append(topic)
+        # Đánh dấu đã crawl
+        mark_as_crawled(topic)
 
-        # Delay để tránh bị Wikipedia block
+        # Nghỉ giữa các request
         time.sleep(1)
 
-    # Index batch cuối
-    if batch_docs:
-        try:
-            added = add_new_documents(batch_docs)
-            total_added += added
-            print(f"\n📦 Index batch cuối: +{added} chunks")
-        except Exception as e:
-            print(f"❌ Lỗi index batch cuối: {e}")
-
-    # Báo cáo
-    print(f"\n{'='*60}")
-    print(f"✅ HOÀN TẤT CRAWL")
-    print(f"  📄 Tổng tài liệu: {total_docs}")
-    print(f"  📦 Tổng chunks đã thêm: {total_added}")
-    if failed_topics:
-        print(f"  ❌ Thất bại ({len(failed_topics)}): {', '.join(failed_topics)}")
-    print(f"{'='*60}")
-
-    # Kiểm tra PostgreSQL
-    from pg_vector_store import PgVectorStore
-    pg_store = PgVectorStore()
-    total = pg_store.count_documents()
-    print(f"\n📊 PostgreSQL hiện có: {total} chunks")
-    pg_store.close()
+    print("\n" + "=" * 60)
+    print(f"✅ HOÀN TẤT CRAWL!")
+    print(f"   📄 Bài viết mới: {total_articles}")
+    print(f"   📦 Chunks mới: {total_chunks}")
+    print(f"   ⏭️ Bỏ qua (đã crawl): {skipped}")
+    print("=" * 60)
 
 
 if __name__ == "__main__":
-    crawl_all_topics()
+    crawl_all()

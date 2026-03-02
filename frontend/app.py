@@ -1,449 +1,500 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import sys
 import os
+import time
 
+# Cấu hình path
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
-from backend.rag_chain_pg import ask_pg, clear_history_pg, get_stats
+# Kết nối backend
+from backend.rag_chain_pg import ask_pg, clear_history_pg, get_database_info
 
-# Cấu hình trang
+# ============================================================
+# CẤU HÌNH TRANG
+# ============================================================
 st.set_page_config(
-    page_title="Chatbot Lịch Sử Việt Nam",
-    page_icon="🇻🇳",
-    layout="centered"
+    page_title="Lịch Sử Việt Nam AI",
+    page_icon="✨",
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
 # ============================================================
-# CSS TÙY CHỈNH - THEME CỜ VIỆT NAM (ĐỎ - VÀNG)
+# CSS — GEMINI STYLE (TỐI GIẢN, DARK THEME)
 # ============================================================
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600&display=swap');
 
-    /* ===== THEME CHÍNH ===== */
-    :root {
-        --vn-red: #DA251D;
-        --vn-red-dark: #B71C1C;
-        --vn-red-light: #E53935;
-        --vn-yellow: #FFCD00;
-        --vn-yellow-light: #FFD740;
-        --vn-gold: #FFB300;
-        --bg-dark: #0a0a0f;
-        --bg-card: #12121a;
-        --bg-sidebar: #0d0d14;
-        --text-primary: #f0f0f0;
-        --text-secondary: #a0a0a0;
-        --border-color: #2a2a35;
+    /* ===== RESET & FONT ===== */
+    #MainMenu, footer, header,
+    div[data-testid="stToolbar"],
+    div[data-testid="stDecoration"],
+    .stDeployButton {
+        display: none !important;
+        visibility: hidden !important;
     }
 
-    * { font-family: 'Inter', sans-serif !important; }
-
-    /* ===== HEADER / TIÊU ĐỀ ===== */
-    .vn-header {
-        text-align: center;
-        padding: 25px 20px 10px 20px;
-        position: relative;
-    }
-    .vn-header .flag-icon {
-        font-size: 2.8rem;
-        display: block;
-        margin-bottom: 8px;
-        filter: drop-shadow(0 0 10px rgba(218, 37, 29, 0.4));
-    }
-    .vn-header h1 {
-        font-size: 2rem;
-        font-weight: 800;
-        background: linear-gradient(135deg, var(--vn-yellow), var(--vn-gold), var(--vn-yellow-light));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin: 0;
-        letter-spacing: -0.5px;
-    }
-    .vn-header .subtitle {
-        color: var(--text-secondary);
-        font-size: 0.9rem;
-        margin-top: 6px;
-        font-weight: 400;
-    }
-    .vn-header .red-line {
-        width: 80px;
-        height: 3px;
-        background: linear-gradient(90deg, transparent, var(--vn-red), transparent);
-        margin: 12px auto 0 auto;
-        border-radius: 2px;
+    * {
+        font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
     }
 
-    /* ===== WELCOME BOX ===== */
-    .welcome-box {
-        text-align: center;
-        padding: 45px 30px;
-        border-radius: 16px;
-        background: linear-gradient(145deg, #1a0a0a, #12121a);
-        border: 1px solid rgba(218, 37, 29, 0.2);
-        margin: 25px auto;
-        max-width: 620px;
-        position: relative;
-        overflow: hidden;
+    /* ===== BACKGROUND ===== */
+    .stApp {
+        background: #131314 !important;
     }
-    .welcome-box::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 3px;
-        background: linear-gradient(90deg, var(--vn-red), var(--vn-yellow), var(--vn-red));
+
+    /* ===== SIDEBAR — GEMINI STYLE ===== */
+    section[data-testid="stSidebar"] {
+        background: #1e1f20 !important;
+        border-right: 1px solid #2d2e2f !important;
+        min-width: 260px !important;
+        max-width: 260px !important;
     }
-    .welcome-box .star {
-        font-size: 3.5rem;
-        margin-bottom: 15px;
-        display: block;
-        filter: drop-shadow(0 0 15px rgba(255, 205, 0, 0.5));
+
+    section[data-testid="stSidebar"] .block-container,
+    section[data-testid="stSidebar"] > div {
+        padding-top: 16px !important;
     }
-    .welcome-box .greeting {
-        font-size: 1.25rem;
-        font-weight: 700;
-        color: var(--vn-yellow);
-        margin-bottom: 10px;
+
+    /* Nút toggle sidebar */
+    button[data-testid="stSidebarCollapseButton"],
+    button[data-testid="stSidebarExpandButton"],
+    [data-testid="collapsedControl"] button {
+        color: #c4c7c5 !important;
+        background: transparent !important;
+        border: none !important;
     }
-    .welcome-box .desc {
-        color: var(--text-secondary);
-        font-size: 0.95rem;
-        line-height: 1.7;
+    button[data-testid="stSidebarCollapseButton"]:hover,
+    button[data-testid="stSidebarExpandButton"]:hover,
+    [data-testid="collapsedControl"] button:hover {
+        color: #e3e3e3 !important;
+        background: #282a2c !important;
+        border-radius: 50% !important;
     }
-    .welcome-box .desc b {
-        color: var(--vn-yellow-light);
+    [data-testid="collapsedControl"] {
+        background: transparent !important;
+        color: #c4c7c5 !important;
     }
-    .welcome-box .tags {
-        margin-top: 20px;
-        display: flex;
-        justify-content: center;
-        gap: 8px;
-        flex-wrap: wrap;
-    }
-    .welcome-box .tag {
-        background: rgba(218, 37, 29, 0.15);
-        border: 1px solid rgba(218, 37, 29, 0.3);
-        color: #ff8a80;
-        padding: 5px 14px;
-        border-radius: 20px;
-        font-size: 0.78rem;
+
+    /* Sidebar label */
+    .sidebar-label {
+        font-size: 12px;
+        color: #8e918f;
         font-weight: 500;
-    }
-
-    /* ===== SIDEBAR ===== */
-    [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #0d0a0a, #0d0d14) !important;
-        border-right: 1px solid rgba(218, 37, 29, 0.15) !important;
-    }
-
-    .sidebar-brand {
-        text-align: center;
-        padding: 10px 0 5px 0;
-    }
-    .sidebar-brand .logo {
-        font-size: 2.2rem;
-        margin-bottom: 5px;
-        display: block;
-    }
-    .sidebar-brand .name {
-        font-size: 1.1rem;
-        font-weight: 700;
-        color: var(--vn-yellow);
-    }
-    .sidebar-brand .tagline {
-        font-size: 0.75rem;
-        color: var(--text-secondary);
-        margin-top: 2px;
-    }
-
-    /* Status badge */
-    .status-badge {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        background: rgba(218, 37, 29, 0.1);
-        border: 1px solid rgba(218, 37, 29, 0.25);
-        border-radius: 10px;
-        padding: 10px 14px;
-        margin: 10px 0;
-    }
-    .status-badge .dot {
-        width: 8px;
-        height: 8px;
-        background: #4caf50;
-        border-radius: 50%;
-        box-shadow: 0 0 6px #4caf50;
-        animation: pulse 2s infinite;
-    }
-    @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.5; }
-    }
-    .status-badge .label {
-        color: var(--text-primary);
-        font-size: 0.82rem;
-        font-weight: 500;
-    }
-
-    /* Stats grid */
-    .stats-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-        margin: 10px 0;
-    }
-    .stat-card {
-        background: rgba(255, 205, 0, 0.05);
-        border: 1px solid rgba(255, 205, 0, 0.12);
-        border-radius: 10px;
-        padding: 12px 10px;
-        text-align: center;
-    }
-    .stat-card .stat-value {
-        font-size: 1.4rem;
-        font-weight: 700;
-        color: var(--vn-yellow);
-    }
-    .stat-card .stat-label {
-        font-size: 0.7rem;
-        color: var(--text-secondary);
-        margin-top: 2px;
+        padding: 8px 16px 6px 16px;
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }
 
-    /* Section title */
-    .section-title {
-        font-size: 0.8rem;
-        font-weight: 600;
-        color: var(--vn-yellow);
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        margin: 15px 0 8px 0;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-    }
-    .section-title::after {
-        content: '';
-        flex: 1;
-        height: 1px;
-        background: linear-gradient(90deg, rgba(218, 37, 29, 0.3), transparent);
-    }
-
-    /* Suggestion buttons */
-    .suggestion-btn button {
-        border: 1px solid var(--border-color) !important;
-        border-radius: 10px !important;
-        background: rgba(218, 37, 29, 0.05) !important;
-        transition: all 0.3s ease !important;
+    /* Sidebar Streamlit button overrides */
+    section[data-testid="stSidebar"] .stButton > button {
+        background: transparent !important;
+        border: none !important;
+        border-radius: 20px !important;
+        color: #c4c7c5 !important;
+        font-size: 14px !important;
+        font-weight: 400 !important;
+        padding: 10px 16px !important;
         text-align: left !important;
-        font-size: 0.85rem !important;
+        justify-content: flex-start !important;
+        transition: all 0.15s ease !important;
+        width: 100% !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
     }
-    .suggestion-btn button:hover {
-        border-color: var(--vn-red) !important;
-        background: rgba(218, 37, 29, 0.12) !important;
-        transform: translateX(3px);
+    section[data-testid="stSidebar"] .stButton > button:hover {
+        background: #282a2c !important;
+        color: #e3e3e3 !important;
+        border: none !important;
+    }
+    /* Active conversation button — primary type */
+    section[data-testid="stSidebar"] .stButton > button[kind="primary"] {
+        background: #2a3a50 !important;
+        color: #a8c7fa !important;
+        font-weight: 500 !important;
+        border: none !important;
     }
 
-    /* Delete button */
-    .delete-btn button {
-        border: 1px solid rgba(218, 37, 29, 0.3) !important;
-        color: #ff8a80 !important;
-        border-radius: 10px !important;
+    /* Sidebar divider */
+    section[data-testid="stSidebar"] hr {
+        border-color: #2d2e2f !important;
+        margin: 8px 12px !important;
     }
-    .delete-btn button:hover {
-        background: rgba(218, 37, 29, 0.15) !important;
-        border-color: var(--vn-red) !important;
+
+    /* ===== MAIN CONTENT — CĂN GIỮA ===== */
+    .main .block-container,
+    .stAppViewBlockContainer {
+        max-width: 780px !important;
+        padding: 20px 20px 200px 20px !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+    }
+
+    /* ===== WELCOME SCREEN ===== */
+    .welcome-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 50vh;
+        text-align: center;
+        margin-top: -50px;
+    }
+
+    .welcome-greeting {
+        font-size: 44px;
+        font-weight: 500;
+        background: -webkit-linear-gradient(16deg, #4b90ff, #ff5546);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 8px;
+        line-height: 1.2;
+    }
+
+    .welcome-sub {
+        font-size: 40px;
+        color: #e3e3e3;
+        font-weight: 500;
+        margin-bottom: 50px;
+    }
+
+    /* ===== SUGGESTION PILLS ===== */
+    .suggestions-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        justify-content: center;
+        max-width: 700px;
+        margin: 0 auto;
+    }
+
+    div[data-testid="stHorizontalBlock"] {
+        justify-content: center !important;
+        gap: 10px !important;
+    }
+
+    /* Main area suggestion buttons */
+    .main .stButton > button {
+        background-color: #1e1f20 !important;
+        border: 1px solid #1e1f20 !important;
+        border-radius: 24px !important;
+        color: #c4c7c5 !important;
+        font-size: 14px !important;
+        font-weight: 400 !important;
+        padding: 10px 20px !important;
+        transition: all 0.2s ease !important;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .main .stButton > button:hover {
+        background-color: #282a2c !important;
+        border-color: #282a2c !important;
+        color: #e3e3e3 !important;
     }
 
     /* ===== CHAT MESSAGES ===== */
-    .stChatMessage {
-        max-width: 3000px !important;
-        margin-left: auto !important;
-        margin-right: auto !important;
-    }
-    .stChatInput {
-        max-width: 3000px !important;
-        margin-left: auto !important;
-        margin-right: auto !important;
+    div[data-testid="stChatMessage"] {
+        background: transparent !important;
+        border: none !important;
+        padding: 20px 0 !important;
+        max-width: 800px !important;
+        margin: 0 auto !important;
     }
 
-    /* ===== FOOTER ===== */
-    .sidebar-footer {
-        text-align: center;
-        padding: 15px 0;
-        border-top: 1px solid var(--border-color);
-        margin-top: 15px;
+    div[data-testid="stChatMessage"] .stMarkdown p {
+        color: #e3e3e3 !important;
+        font-size: 16px !important;
+        line-height: 1.6 !important;
     }
-    .sidebar-footer .version {
-        font-size: 0.7rem;
-        color: var(--text-secondary);
+
+    /* Avatar */
+    div[data-testid="stChatMessage"] [data-testid="stAvatar"],
+    div[data-testid="stChatMessage"] .stAvatar {
+        width: 36px !important;
+        height: 36px !important;
+        border-radius: 50% !important;
     }
-    .sidebar-footer .flag {
-        font-size: 1.5rem;
-        margin-bottom: 5px;
-        display: block;
+
+    /* ===== CHAT INPUT ===== */
+    div[data-testid="stChatInput"] {
+        max-width: 750px !important;
+        margin: 0 auto !important;
+    }
+
+    /* Textarea */
+    div[data-testid="stChatInput"] textarea {
+        background-color: #1e1f20 !important;
+        border: 1px solid #3c4043 !important;
+        border-radius: 28px !important;
+        color: #e3e3e3 !important;
+        font-size: 16px !important;
+        padding: 18px 60px 18px 24px !important;
+        min-height: 60px !important;
+        width: 100% !important;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
+        transition: all 0.3s ease !important;
+    }
+
+    div[data-testid="stChatInput"] textarea:focus {
+        background-color: #282a2c !important;
+        border-color: #5f6368 !important;
+        outline: none !important;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important;
+    }
+
+    /* Bottom container — Gemini style */
+    div[data-testid="stBottom"] {
+        background: #131314 !important;
+        border-top: none !important;
+    }
+
+    div[data-testid="stBottomBlockContainer"] {
+        max-width: 780px !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+        padding: 16px 20px 24px 20px !important;
+        background: #131314 !important;
+    }
+
+    /* Nút Gửi */
+    div[data-testid="stChatInput"] button {
+        background: transparent !important;
+        color: #c4c7c5 !important;
+        right: 15px !important;
+        bottom: 12px !important;
+    }
+
+    div[data-testid="stChatInput"] button:hover {
+        color: #e3e3e3 !important;
+        background: #3c4043 !important;
+        border-radius: 50%;
+    }
+
+    /* ===== EXPANDER (ẩn) ===== */
+    div[data-testid="stExpander"] {
+        background-color: #1e1f20 !important;
+        border: none !important;
+        border-radius: 16px !important;
+        margin-top: 12px !important;
+    }
+    div[data-testid="stExpander"] summary {
+        color: #c4c7c5 !important;
+    }
+    .src-chip {
+        display: inline-block;
+        background: #282a2c;
+        color: #a8c7fa;
+        font-size: 12px;
+        padding: 6px 14px;
+        border-radius: 16px;
+        margin: 4px 6px 4px 0;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# ============================================================
-# HEADER
-# ============================================================
-st.markdown("""
-<div class="vn-header">
-    <span class="flag-icon">🇻🇳</span>
-    <h1>Chatbot Lịch Sử Việt Nam</h1>
-    <div class="subtitle">Hệ thống tra cứu lịch sử thông minh bằng AI</div>
-    <div class="red-line"></div>
-</div>
-""", unsafe_allow_html=True)
+
 
 # ============================================================
-# SIDEBAR
+# SESSION STATE — HỖ TRỢ NHIỀU CUỘC TRÒ CHUYỆN
+# ============================================================
+if "conversations" not in st.session_state:
+    st.session_state.conversations = {}
+
+if "current_conv_id" not in st.session_state:
+    st.session_state.current_conv_id = None
+
+# Inject JS để fix sidebar đóng/mở căn giữa
+components.html("""
+<script>
+(function() {
+    const doc = window.parent.document;
+    
+    // Tạo style tag để inject vào parent
+    let styleEl = doc.getElementById('sidebar-fix-style');
+    if (!styleEl) {
+        styleEl = doc.createElement('style');
+        styleEl.id = 'sidebar-fix-style';
+        doc.head.appendChild(styleEl);
+    }
+    
+    function updateLayout() {
+        const sidebar = doc.querySelector('section[data-testid="stSidebar"]');
+        const isExpanded = sidebar && sidebar.getAttribute('aria-expanded') === 'true';
+        
+        if (isExpanded) {
+            styleEl.textContent = '';
+        } else {
+            styleEl.textContent = `
+                .stMain {
+                    margin-left: 0px !important;
+                    width: 100% !important;
+                }
+                div[data-testid="stBottom"] {
+                    left: 0px !important;
+                    width: 100% !important;
+                }
+            `;
+        }
+    }
+    
+    updateLayout();
+    setInterval(updateLayout, 150);
+    
+    const sidebar = doc.querySelector('section[data-testid="stSidebar"]');
+    if (sidebar) {
+        new MutationObserver(updateLayout).observe(sidebar, {
+            attributes: true, attributeFilter: ['aria-expanded']
+        });
+    }
+})();
+</script>
+""", height=0)
+
+def get_current_messages():
+    """Lấy messages của cuộc trò chuyện hiện tại."""
+    cid = st.session_state.current_conv_id
+    if cid and cid in st.session_state.conversations:
+        return st.session_state.conversations[cid]["messages"]
+    return []
+
+def create_new_conversation():
+    """Tạo cuộc trò chuyện mới."""
+    conv_id = f"conv_{int(time.time() * 1000)}"
+    st.session_state.conversations[conv_id] = {
+        "title": "Cuộc trò chuyện mới",
+        "messages": []
+    }
+    st.session_state.current_conv_id = conv_id
+    clear_history_pg(session_id=conv_id)
+    return conv_id
+
+def generate_title(question: str) -> str:
+    """Tạo tiêu đề ngắn gọn từ câu hỏi đầu tiên."""
+    title = question.strip()
+    for prefix in ["hãy ", "cho tôi biết ", "tóm tắt ", "giải thích ", "kể về ", "nói về ", "trình bày "]:
+        if title.lower().startswith(prefix):
+            title = title[len(prefix):]
+            break
+    if len(title) > 40:
+        title = title[:37] + "..."
+    return title.capitalize() if title else "Cuộc trò chuyện mới"
+
+# ============================================================
+# SIDEBAR — LỊCH SỬ TRÒ CHUYỆN
 # ============================================================
 with st.sidebar:
-    # Brand
-    st.markdown("""
-    <div class="sidebar-brand">
-        <span class="logo">🇻🇳</span>
-        <div class="name">Lịch Sử Việt Nam</div>
-        <div class="tagline">Tra cứu • Hỏi đáp • Khám phá</div>
+    # Nút tạo cuộc trò chuyện mới
+    if st.button("✏️  Cuộc trò chuyện mới", key="new_chat_btn", use_container_width=True):
+        create_new_conversation()
+        st.rerun()
+
+    st.markdown("---")
+
+    # Hiển thị danh sách cuộc trò chuyện
+    if st.session_state.conversations:
+        st.markdown('<div class="sidebar-label">Cuộc trò chuyện</div>', unsafe_allow_html=True)
+
+        sorted_convs = sorted(
+            st.session_state.conversations.items(),
+            key=lambda x: x[0],
+            reverse=True
+        )
+
+        for conv_id, conv_data in sorted_convs:
+            title = conv_data.get("title", "Cuộc trò chuyện mới")
+            is_active = (conv_id == st.session_state.current_conv_id)
+            btn_type = "primary" if is_active else "secondary"
+
+            if st.button(
+                f"💬 {title}",
+                key=f"sidebar_{conv_id}",
+                use_container_width=True,
+                type=btn_type
+            ):
+                st.session_state.current_conv_id = conv_id
+                st.rerun()
+
+# ============================================================
+# NỘI DUNG CHÍNH
+# ============================================================
+current_messages = get_current_messages()
+
+# MÀN HÌNH WELCOME
+if not current_messages:
+    user_name = "Bạn"
+
+    st.markdown(f"""
+    <div class="welcome-container">
+        <div class="welcome-greeting">✨ Xin chào {user_name}!</div>
+        <div class="welcome-sub">Chúng ta nên bắt đầu từ đâu nhỉ?</div>
     </div>
     """, unsafe_allow_html=True)
 
-    st.divider()
+    st.markdown('<div class="suggestions-row">', unsafe_allow_html=True)
+    col1, col2, col3, col4 = st.columns([1, 1, 1, 1.2])
 
-    # Câu hỏi gợi ý
-    st.markdown("""
-    <div class="section-title">⭐ Câu hỏi gợi ý</div>
-    """, unsafe_allow_html=True)
+    with col1:
+        if st.button("⚔️ Trận Bạch Đằng", use_container_width=True, key="sug1"):
+            st.session_state["pending_question"] = "Trận Bạch Đằng năm 938 diễn ra thế nào?"
+    with col2:
+        if st.button("🏔️ Điện Biên Phủ", use_container_width=True, key="sug2"):
+            st.session_state["pending_question"] = "Tóm tắt chiến dịch Điện Biên Phủ 1954"
+    with col3:
+        if st.button("✈️ Hà Nội 1972", use_container_width=True, key="sug3"):
+            st.session_state["pending_question"] = "Trận Hà Nội 12 ngày đêm 1972 diễn biến ra sao?"
+    with col4:
+        if st.button("🇻🇳 Cách mạng Tháng 8", use_container_width=True, key="sug4"):
+            st.session_state["pending_question"] = "Cách mạng Tháng Tám 1945 có ý nghĩa gì?"
 
-    suggestions = [
-        "🗡️ Trận Bạch Đằng năm 938 diễn ra thế nào?",
-        "👩 Khởi nghĩa Hai Bà Trưng có ý nghĩa gì?",
-        "⚔️ Chiến dịch Điện Biên Phủ ra sao?",
-        "🏴 Cách mạng Tháng Tám 1945 là gì?",
-        "🛡️ Nhà Trần chống quân Nguyên Mông?",
-        "✈️ Trận Hà Nội 12 ngày đêm?",
-    ]
-    for s in suggestions:
-        st.markdown('<div class="suggestion-btn">', unsafe_allow_html=True)
-        if st.button(s, use_container_width=True):
-            # Lấy phần text sau emoji
-            st.session_state["pending_question"] = s.split(" ", 1)[1] if s[0] in "🗡👩⚔🏴🛡✈" else s
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    st.divider()
-
-    # Xóa lịch sử
-    st.markdown('<div class="delete-btn">', unsafe_allow_html=True)
-    if st.button("🗑️ Xóa lịch sử chat", use_container_width=True, type="secondary"):
-        clear_history_pg("streamlit_session")
-        st.session_state.messages = []
-        st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # Footer
-    st.markdown("""
-    <div class="sidebar-footer">
-        <span class="flag">🇻🇳</span>
-        <div class="version">Đồ án 2 — Chatbot Lịch Sử v2.0</div>
-    </div>
-    """, unsafe_allow_html=True)
-
 # ============================================================
-# CHAT AREA
+# HIỂN THỊ LỊCH SỬ CHAT
 # ============================================================
-
-# Khởi tạo session
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
-# Welcome message
-if not st.session_state.messages:
-    st.markdown("""
-    <div class="welcome-box">
-        <span class="star">⭐</span>
-        <div class="greeting">Xin chào! 🇻🇳</div>
-        <div class="desc">
-            Tôi là trợ lý AI chuyên về <b>Lịch Sử Việt Nam</b><br>
-            Từ thời <b>Văn Lang – Âu Lạc</b> đến <b>thời kỳ hiện đại</b><br><br>
-            Hãy hỏi tôi về bất kỳ sự kiện, nhân vật,<br>
-            trận đánh hay triều đại nào bạn quan tâm!
-        </div>
-        <div class="tags">
-            <span class="tag">🏛️ Triều đại</span>
-            <span class="tag">⚔️ Trận đánh</span>
-            <span class="tag">👤 Nhân vật</span>
-            <span class="tag">📜 Sự kiện</span>
-            <span class="tag">🗺️ Địa danh</span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-# Hiển thị lịch sử chat
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
+for msg in current_messages:
+    avatar = "👤" if msg["role"] == "user" else "✨"
+    with st.chat_message(msg["role"], avatar=avatar):
         st.markdown(msg["content"])
-        if msg.get("sources"):
-            with st.expander("📚 Nguồn tham khảo"):
-                for src in msg["sources"]:
-                    st.write(f"- {src}")
-        if msg.get("crawl_info"):
-            with st.expander("🔍 Thông tin crawl"):
-                info = msg["crawl_info"]
-                st.write(f"- **Chunk mới:** {info.get('new_chunks', 0)}")
-        if msg.get("evaluation"):
-            with st.expander("📊 Đánh giá context"):
-                eval_info = msg["evaluation"]
-                st.write(f"- **Đủ context:** {'✅' if eval_info['sufficient'] else '❌'}")
-                st.write(f"- **Độ tin cậy:** {eval_info['confidence']}")
 
-# Hàm xử lý câu hỏi
-def process_question(question):
-    st.session_state.messages.append({"role": "user", "content": question})
+# ============================================================
+# XỬ LÝ CÂU HỎI
+# ============================================================
+def process_question(question: str):
+    """Xử lý câu hỏi: tạo conv nếu cần, gửi → nhận → lưu."""
+    if not st.session_state.current_conv_id or st.session_state.current_conv_id not in st.session_state.conversations:
+        create_new_conversation()
 
-    with st.chat_message("user"):
-        st.markdown(question)
+    conv_id = st.session_state.current_conv_id
+    conv = st.session_state.conversations[conv_id]
 
-    with st.chat_message("assistant"):
-        with st.spinner("🔍 Đang tìm kiếm trong kho tri thức lịch sử..."):
-            response = ask_pg(question, session_id="streamlit_session")
+    conv["messages"].append({"role": "user", "content": question})
 
-        st.markdown(response["answer"])
+    # Cập nhật tiêu đề nếu là câu hỏi đầu tiên
+    if len([m for m in conv["messages"] if m["role"] == "user"]) == 1:
+        conv["title"] = generate_title(question)
 
-        msg_data = {"role": "assistant", "content": response["answer"]}
+    with st.spinner("Đang suy nghĩ..."):
+        response = ask_pg(question, session_id=conv_id)
 
-        if response.get("sources"):
-            with st.expander("📚 Nguồn tham khảo"):
-                for src in response["sources"]:
-                    st.write(f"- {src}")
-            msg_data["sources"] = response["sources"]
+    msg_data = {"role": "assistant", "content": response["answer"]}
+    if response.get("sources"):
+        msg_data["sources"] = response["sources"]
+    if response.get("evaluation"):
+        msg_data["evaluation"] = response["evaluation"]
+    conv["messages"].append(msg_data)
 
-        if response.get("crawl_info"):
-            with st.expander("🔍 Thông tin crawl"):
-                info = response["crawl_info"]
-                st.write(f"- **Chunk mới:** {info.get('new_chunks', 0)}")
-            msg_data["crawl_info"] = response["crawl_info"]
-
-        if response.get("evaluation"):
-            with st.expander("📊 Đánh giá context"):
-                eval_info = response["evaluation"]
-                st.write(f"- **Đủ context:** {'✅' if eval_info['sufficient'] else '❌'}")
-                st.write(f"- **Độ tin cậy:** {eval_info['confidence']}")
-            msg_data["evaluation"] = response["evaluation"]
-
-        st.session_state.messages.append(msg_data)
-
-# Xử lý câu hỏi từ gợi ý
+# Xử lý nếu bấm nút gợi ý
 if "pending_question" in st.session_state:
-    question = st.session_state.pop("pending_question")
-    process_question(question)
+    q = st.session_state.pop("pending_question")
+    process_question(q)
     st.rerun()
 
-# Xử lý input từ chat box
-if question := st.chat_input("💬 Nhập câu hỏi về lịch sử Việt Nam..."):
-    process_question(question)
+# Input Chat chính
+if prompt := st.chat_input("Nhập câu hỏi về lịch sử Việt Nam..."):
+    process_question(prompt)
+    st.rerun()
