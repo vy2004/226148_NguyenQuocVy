@@ -30,6 +30,70 @@ Hệ thống chatbot thông minh sử dụng kỹ thuật **RAG (Retrieval-Augme
 
 ---
 
+## Sơ đồ RAG
+![Sơ đồ RAG](docs/sodorag.png)
+
+### Phân tích luồng hoạt động của sơ đồ
+
+Sơ đồ RAG gồm **6 khối chức năng** chính, hoạt động theo 2 luồng: **Nạp dữ liệu (Offline)** và **Hỏi đáp (Online)**.
+
+#### 🟢 Khối 1: Nạp dữ liệu (màu xanh lá — góc trên phải)
+
+Luồng xử lý dữ liệu đầu vào trước khi chatbot hoạt động:
+
+1. **Nguồn dữ liệu**: 23 file văn bản (`data/raw/`) gồm 9 file biên soạn thủ công + 14 file crawl từ Wikipedia tiếng Việt qua `wiki_crawler.py`
+2. **Đọc file**: `loader.py` đọc toàn bộ file `.txt` với encoding UTF-8
+3. **Chia nhỏ văn bản**: `chunking.py` chia văn bản dài thành các đoạn nhỏ (chunk_size = 800 ký tự, chồng lấp = 200 ký tự)
+4. **Tạo vector nhúng & lưu trữ**: `indexing.py` tạo embedding cho mỗi đoạn và lưu vào ChromaDB
+
+#### 🔵 Khối 2: Cơ sở dữ liệu ChromaDB (màu xanh dương — bên phải)
+
+Nơi lưu trữ và truy vấn dữ liệu vector:
+
+- **Bộ sưu tập**: `vietnam_history` chứa ~5890 đoạn văn bản
+- **Đo lường**: Cosine Similarity
+- **Mô hình nhúng**: `paraphrase-multilingual-MiniLM-L12-v2` (384 chiều)
+
+#### 🟣 Khối 3: Hỏi đáp — Trực tuyến (màu tím — góc dưới trái)
+
+Luồng bắt đầu khi người dùng tương tác:
+
+1. **Người dùng** nhập câu hỏi
+2. **Giao diện Streamlit** (`app.py`) — chủ đề tối kiểu Gemini, có sidebar lịch sử trò chuyện — tiếp nhận câu hỏi
+3. **Bộ xử lý RAG** (`rag_chain_pg.py`) nhận câu hỏi và chuyển sang khối Tìm kiếm kết hợp
+
+#### 🟠 Khối 4: Tìm kiếm kết hợp — Hybrid Search (màu cam — trung tâm)
+
+Đây là khối xử lý cốt lõi, quyết định context nào sẽ được gửi cho LLM:
+
+1. **Phát hiện câu hỏi tiếp nối** (hình thoi — điểm quyết định):
+   - Nếu là **chủ đề mới** → chạy song song 2 nhánh tìm kiếm:
+     - **Tìm theo từ khóa**: ánh xạ ~60 từ khóa → file nguồn chính xác, lấy tối đa 15 đoạn
+     - **Tìm theo ngữ nghĩa**: so sánh vector cosine trong ChromaDB, lấy 8 đoạn gần nhất
+   - Nếu là **câu hỏi tiếp nối** → tái sử dụng ngữ cảnh cũ từ phiên trước (không tìm kiếm lại)
+2. **Gộp kết quả & loại trùng**: kết hợp kết quả từ 2 nguồn, loại bỏ đoạn trùng lặp, giới hạn tối đa 20 đoạn tổng cộng
+
+#### 🔴 Khối 5: Mô hình ngôn ngữ lớn — Groq LLM (màu đỏ đậm — góc dưới phải)
+
+Xử lý sinh câu trả lời từ context đã tìm được:
+
+1. **Xây dựng câu lệnh (prompt)**: gồm vai trò chuyên gia lịch sử Việt Nam + lịch sử chat (2 tin gần nhất) + ngữ cảnh (tối đa 8000 ký tự) + câu hỏi người dùng
+2. **Ước tính số token**: ≈ tổng ký tự ÷ 3. Nếu vượt 10.000 token → tự động cắt ngữ cảnh
+3. **Gọi Groq API**: mô hình LLaMA 3.3 70B, nhiệt độ 0.3, tối đa 4096 token đầu ra
+4. **Câu trả lời**: có cấu trúc, bằng tiếng Việt, theo trình tự Bối cảnh → Diễn biến → Kết quả
+
+#### 🟤 Khối 6: Trạng thái phiên (màu tím đậm — góc trên trái)
+
+Lưu trữ tạm thời để hỗ trợ hội thoại liên tục:
+
+- **Lịch sử trò chuyện**: các cặp hỏi-đáp trước đó
+- **Ngữ cảnh hiện tại**: context đã tìm kiếm gần nhất
+- **Chủ đề hiện tại**: chủ đề đang được thảo luận
+
+> Trạng thái phiên được **lưu lại** sau mỗi câu trả lời và được **đọc ra** tại bước Phát hiện câu hỏi tiếp nối để quyết định tìm kiếm mới hay tái sử dụng context cũ.
+
+---
+
 ## 🏗️ Kiến trúc hệ thống
 
 ```
