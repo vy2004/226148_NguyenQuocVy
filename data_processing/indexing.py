@@ -1,11 +1,12 @@
 """
 Module indexing: Tạo vector database bằng ChromaDB
+Sử dụng multilingual-e5-base cho embedding tiếng Việt chất lượng cao.
 """
 
 import os
 import chromadb
-from chromadb.utils import embedding_functions
 from typing import List, Dict
+from sentence_transformers import SentenceTransformer
 
 # Cấu hình ChromaDB
 CHROMA_PERSIST_DIR = os.path.join(
@@ -13,7 +14,47 @@ CHROMA_PERSIST_DIR = os.path.join(
     "data", "chromadb"
 )
 COLLECTION_NAME = "vietnam_history"
-EMBEDDING_MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+EMBEDDING_MODEL = "intfloat/multilingual-e5-base"
+
+
+# ======================== CUSTOM EMBEDDING ========================
+
+class E5EmbeddingFunction:
+    """
+    Embedding function cho model intfloat/multilingual-e5-base.
+    Model E5 yêu cầu prefix "query: " hoặc "passage: " trước mỗi text.
+    - Khi index tài liệu: dùng "passage: "
+    - Khi tìm kiếm: dùng "query: "
+    """
+
+    def __init__(self, model_name: str = EMBEDDING_MODEL):
+        print(f"[Embedding] Loading model: {model_name} ...")
+        self._model = SentenceTransformer(model_name)
+        self._mode = "query"  # Mặc định là query (search)
+        print(f"[Embedding] ✅ Model loaded ({self._model.get_sentence_embedding_dimension()} dims)")
+
+    def set_mode(self, mode: str):
+        """Chuyển mode: 'query' cho tìm kiếm, 'passage' cho index tài liệu."""
+        assert mode in ("query", "passage"), f"Mode phải là 'query' hoặc 'passage', nhận: {mode}"
+        self._mode = mode
+
+    def __call__(self, input: List[str]) -> List[List[float]]:
+        prefix = "query: " if self._mode == "query" else "passage: "
+        prefixed = [prefix + text for text in input]
+        embeddings = self._model.encode(prefixed, normalize_embeddings=True)
+        return embeddings.tolist()
+
+
+# Singleton embedding function (tránh load model nhiều lần)
+_embedding_fn_instance = None
+
+
+def get_embedding_function() -> E5EmbeddingFunction:
+    """Lấy embedding function (singleton, chỉ load model 1 lần)."""
+    global _embedding_fn_instance
+    if _embedding_fn_instance is None:
+        _embedding_fn_instance = E5EmbeddingFunction(EMBEDDING_MODEL)
+    return _embedding_fn_instance
 
 
 def get_chroma_client():
@@ -23,17 +64,12 @@ def get_chroma_client():
     return client
 
 
-def get_embedding_function():
-    """Tạo embedding function sử dụng sentence-transformers."""
-    return embedding_functions.SentenceTransformerEmbeddingFunction(
-        model_name=EMBEDDING_MODEL
-    )
-
-
 def get_collection():
     """Lấy hoặc tạo collection trong ChromaDB."""
     client = get_chroma_client()
     embedding_fn = get_embedding_function()
+    # Đảm bảo mode query khi sử dụng collection bình thường
+    embedding_fn.set_mode("query")
     collection = client.get_or_create_collection(
         name=COLLECTION_NAME,
         embedding_function=embedding_fn,
@@ -50,6 +86,10 @@ def create_vector_database(chunks: List[Dict]):
     if not chunks:
         print("❌ Không có chunks để index!")
         return
+
+    # Chuyển sang mode "passage" khi index tài liệu
+    embedding_fn = get_embedding_function()
+    embedding_fn.set_mode("passage")
 
     collection = get_collection()
 
@@ -86,37 +126,50 @@ def create_vector_database(chunks: List[Dict]):
         )
         print(f"  ✅ Đã index {end}/{total} chunks")
 
+    # Chuyển lại mode "query" sau khi index xong
+    embedding_fn.set_mode("query")
+
     print(f"\n✅ Tổng cộng {total} chunks đã được index vào ChromaDB")
     print(f"📁 Dữ liệu lưu tại: {CHROMA_PERSIST_DIR}")
+    print(f"🧠 Embedding model: {EMBEDDING_MODEL}")
 
 
-def search(query: str, top_k: int = 5) -> List[Dict]:
+def search(query: str, top_k: int = 5, max_distance: float = 0.8) -> List[Dict]:
     """
     Tìm kiếm tài liệu liên quan đến câu hỏi.
+    ChromaDB cosine distance: 0 = giống nhất, 2 = khác nhất.
+    max_distance: ngưỡng tối đa, chỉ trả về kết quả có distance < max_distance.
     """
     collection = get_collection()
 
     if collection.count() == 0:
-        print("⚠️ Database trống! Hãy chạy pipeline trước.")
+        print("[Search] ⚠️ Database rỗng! Chạy run_pipeline.py trước.")
         return []
 
     results = collection.query(
         query_texts=[query],
-        n_results=top_k,
+        n_results=min(top_k * 2, 20),  # Lấy nhiều hơn rồi lọc
         include=["documents", "metadatas", "distances"]
     )
 
     search_results = []
     if results and results["documents"]:
-        for i, doc in enumerate(results["documents"][0]):
-            result = {
-                "content": doc,
-                "metadata": results["metadatas"][0][i] if results["metadatas"] else {},
-                "score": 1 - results["distances"][0][i] if results["distances"] else 0
-            }
-            search_results.append(result)
+        for doc, meta, dist in zip(
+            results["documents"][0],
+            results["metadatas"][0],
+            results["distances"][0]
+        ):
+            if dist < max_distance:  # Chỉ lấy kết quả đủ tốt
+                search_results.append({
+                    "content": doc,
+                    "metadata": meta,
+                    "score": dist
+                })
 
-    return search_results
+    # Sắp xếp theo score (distance thấp = tốt hơn)
+    search_results.sort(key=lambda x: x["score"])
+
+    return search_results[:top_k]
 
 
 def test_search():

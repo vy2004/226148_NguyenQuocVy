@@ -1,13 +1,13 @@
 """
-Module dynamic indexing: Thêm tài liệu mới vào ChromaDB mà không cần rebuild toàn bộ.
+Module dynamic indexing: Thêm tài liệu PDF mới vào ChromaDB mà không cần rebuild toàn bộ.
 """
 
 import os
 import sys
-import json
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+from loader import load_pdf_file
 from chunking import chunk_documents
 from indexing import get_collection
 
@@ -15,10 +15,10 @@ from indexing import get_collection
 def add_new_documents(documents: list) -> int:
     """
     Thêm tài liệu mới vào ChromaDB.
-    
+
     Args:
-        documents: danh sách dict {"content": "...", "metadata": {...}}
-    
+        documents: danh sách dict {"content": "...", "source": "..."}
+
     Returns:
         Số chunks đã thêm
     """
@@ -26,7 +26,6 @@ def add_new_documents(documents: list) -> int:
         print("❌ Không có tài liệu mới để thêm!")
         return 0
 
-    # Chia nhỏ tài liệu thành chunks
     chunks = chunk_documents(documents)
     if not chunks:
         print("❌ Không tạo được chunks từ tài liệu!")
@@ -60,7 +59,6 @@ def add_new_documents(documents: list) -> int:
         print("❌ Không có nội dung hợp lệ để thêm!")
         return 0
 
-    # Thêm vào ChromaDB theo batch
     batch_size = 500
     total = len(documents_list)
     for start in range(0, total, batch_size):
@@ -68,7 +66,7 @@ def add_new_documents(documents: list) -> int:
         collection.upsert(
             documents=documents_list[start:end],
             metadatas=metadatas_list[start:end],
-            ids=ids_list[start:end]
+            ids=ids_list[start:end],
         )
 
     print(f"✅ Đã thêm {total} chunks mới vào ChromaDB")
@@ -76,22 +74,30 @@ def add_new_documents(documents: list) -> int:
     return total
 
 
-def add_raw_text(text: str, source: str = "unknown") -> int:
+def add_pdf_file(filepath: str) -> int:
     """
-    Thêm một đoạn văn bản thô vào ChromaDB.
-    
+    Thêm một file PDF mới vào ChromaDB.
+
     Args:
-        text: nội dung văn bản
-        source: tên nguồn
-    
+        filepath: đường dẫn đến file PDF
+
     Returns:
         Số chunks đã thêm
     """
-    if not text or not text.strip():
+    if not os.path.exists(filepath):
+        print(f"❌ File không tồn tại: {filepath}")
         return 0
 
-    documents = [{
-        "content": text.strip(),
-        "metadata": {"source": source}
-    }]
+    try:
+        content = load_pdf_file(filepath)
+    except Exception as e:
+        print(f"❌ Lỗi đọc PDF: {e}")
+        return 0
+
+    if not content or not content.strip():
+        print(f"⚠️ File PDF rỗng hoặc không trích xuất được text: {filepath}")
+        return 0
+
+    filename = os.path.basename(filepath)
+    documents = [{"content": content.strip(), "source": filename}]
     return add_new_documents(documents)

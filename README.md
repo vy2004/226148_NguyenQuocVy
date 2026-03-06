@@ -22,75 +22,52 @@ Hệ thống chatbot thông minh sử dụng kỹ thuật **RAG (Retrieval-Augme
 |---|---|
 | **Loại ứng dụng** | Chatbot hỏi đáp lịch sử Việt Nam |
 | **Kỹ thuật AI** | RAG (Retrieval-Augmented Generation) |
-| **Mô hình LLM** | Groq LLaMA 3.3 70B |
+| **Mô hình LLM** | Groq LLaMA 3.3 70B (chính) + Gemini 2.5 Flash (dự phòng) |
 | **Vector DB** | ChromaDB (cosine similarity, persistent storage) |
-| **Embedding** | Sentence Transformers (`paraphrase-multilingual-MiniLM-L12-v2`, 384 chiều) |
+| **Embedding** | Sentence Transformers (`intfloat/multilingual-e5-base`, 768 chiều, prefix query/passage) |
 | **Giao diện** | Streamlit (Gemini-style dark theme) |
-| **Nguồn dữ liệu** | Wikipedia tiếng Việt + Tài liệu .txt thủ công |
+| **Nguồn dữ liệu** | File PDF về lịch sử Việt Nam + Wikipedia (tự động bổ sung khi thiếu thông tin) |
 
 ---
+## Sơ đồ RAG Pipeline
+![RAG Diagram](docs/RAG.png)
 
-## Sơ đồ RAG
-![Sơ đồ RAG](docs/sodorag.png)
+### Luồng hoạt động chi tiết
 
-### Phân tích luồng hoạt động của sơ đồ
+Sơ đồ gồm **3 luồng chính**: Thu nhập dữ liệu (offline), Truy vấn RAG (online), và Dự phòng Wiki + Tự học.
 
-Sơ đồ RAG gồm **6 khối chức năng** chính, hoạt động theo 2 luồng: **Nạp dữ liệu (Offline)** và **Hỏi đáp (Online)**.
+#### 📥 Thu nhập dữ liệu (Offline — khối xanh dương, bên phải)
 
-#### 🟢 Khối 1: Nạp dữ liệu (màu xanh lá — góc trên phải)
+1. **Tài liệu PDF** — Dữ liệu đầu vào là các file PDF về lịch sử Việt Nam.
+2. **Trích xuất văn bản + Chia đoạn (Chunking)** — Đọc text từ PDF, chia thành các đoạn nhỏ (chunk) có overlap để giữ ngữ cảnh liền mạch.
+3. **Embedding Model (`intfloat/multilingual-e5-base`)** — Chuyển mỗi chunk thành vector 768 chiều, sử dụng prefix `"passage: "` khi index.
+4. **ChromaDB Vector Database** — Lưu trữ toàn bộ vector + metadata (nguồn, thứ tự chunk) vào cơ sở dữ liệu vector, sẵn sàng cho tìm kiếm.
 
-Luồng xử lý dữ liệu đầu vào trước khi chatbot hoạt động:
+#### 🔍 Truy vấn RAG (Online — khối tím, bên trái)
 
-1. **Nguồn dữ liệu**: 23 file văn bản (`data/raw/`) gồm 9 file biên soạn thủ công + 14 file crawl từ Wikipedia tiếng Việt qua `wiki_crawler.py`
-2. **Đọc file**: `loader.py` đọc toàn bộ file `.txt` với encoding UTF-8
-3. **Chia nhỏ văn bản**: `chunking.py` chia văn bản dài thành các đoạn nhỏ (chunk_size = 800 ký tự, chồng lấp = 200 ký tự)
-4. **Tạo vector nhúng & lưu trữ**: `indexing.py` tạo embedding cho mỗi đoạn và lưu vào ChromaDB
+1. **Câu hỏi người dùng** — Người dùng nhập câu hỏi qua giao diện Streamlit.
+2. **`ask_pg(câu hỏi, session_id)`** — Hàm chính xử lý: phát hiện câu hỏi tiếp nối (follow-up) hay chủ đề mới, quản lý phiên hội thoại.
+3. **Tạo Embed cho truy vấn** — Câu hỏi được chuyển thành vector (prefix `"query: "`), nếu là follow-up thì kết hợp chủ đề trước + câu hỏi mới.
+4. **ChromaDB — Top-k + Xếp hạng lại** — Tìm kiếm các chunk gần nhất bằng cosine similarity, ưu tiên nguồn khớp tên file, xếp hạng lại bằng keyword boosting.
+5. **Tạo ngữ cảnh + Prompt** — Ghép các chunk thành context (nhóm theo nguồn, sắp theo thứ tự tài liệu), kèm system prompt hướng dẫn LLM trả lời đúng trọng tâm.
+6. **Gọi LLM (Groq chính → Gemini dự phòng)** — Gửi prompt đến Groq (LLaMA 3.3 70B). Nếu Groq hết quota → tự động chuyển sang Gemini (2.5-flash → 2.0-flash → 2.0-flash-lite). Nếu cả hai đều lỗi → extractive fallback (trích xuất câu phù hợp nhất từ context).
+7. **Câu trả lời đủ thông tin?** — Kiểm tra câu trả lời có phải dạng "tài liệu không có thông tin" hay không.
+     - **Đủ** → Lưu lịch sử trò chuyện → Trả câu trả lời cuối cùng cho người dùng.
+     - **Không đủ** → Chuyển sang luồng dự phòng Wikipedia.
 
-#### 🔵 Khối 2: Cơ sở dữ liệu ChromaDB (màu xanh dương — bên phải)
+#### 🌐 Dự phòng Wikipedia + Tự học (khối cam, phía dưới)
 
-Nơi lưu trữ và truy vấn dữ liệu vector:
+Khi tài liệu PDF không chứa đủ thông tin để trả lời, hệ thống tự động:
 
-- **Bộ sưu tập**: `vietnam_history` chứa ~5890 đoạn văn bản
-- **Đo lường**: Cosine Similarity
-- **Mô hình nhúng**: `paraphrase-multilingual-MiniLM-L12-v2` (384 chiều)
-
-#### 🟣 Khối 3: Hỏi đáp — Trực tuyến (màu tím — góc dưới trái)
-
-Luồng bắt đầu khi người dùng tương tác:
-
-1. **Người dùng** nhập câu hỏi
-2. **Giao diện Streamlit** (`app.py`) — chủ đề tối kiểu Gemini, có sidebar lịch sử trò chuyện — tiếp nhận câu hỏi
-3. **Bộ xử lý RAG** (`rag_chain_pg.py`) nhận câu hỏi và chuyển sang khối Tìm kiếm kết hợp
-
-#### 🟠 Khối 4: Tìm kiếm kết hợp — Hybrid Search (màu cam — trung tâm)
-
-Đây là khối xử lý cốt lõi, quyết định context nào sẽ được gửi cho LLM:
-
-1. **Phát hiện câu hỏi tiếp nối** (hình thoi — điểm quyết định):
-   - Nếu là **chủ đề mới** → chạy song song 2 nhánh tìm kiếm:
-     - **Tìm theo từ khóa**: ánh xạ ~60 từ khóa → file nguồn chính xác, lấy tối đa 15 đoạn
-     - **Tìm theo ngữ nghĩa**: so sánh vector cosine trong ChromaDB, lấy 8 đoạn gần nhất
-   - Nếu là **câu hỏi tiếp nối** → tái sử dụng ngữ cảnh cũ từ phiên trước (không tìm kiếm lại)
-2. **Gộp kết quả & loại trùng**: kết hợp kết quả từ 2 nguồn, loại bỏ đoạn trùng lặp, giới hạn tối đa 20 đoạn tổng cộng
-
-#### 🔴 Khối 5: Mô hình ngôn ngữ lớn — Groq LLM (màu đỏ đậm — góc dưới phải)
-
-Xử lý sinh câu trả lời từ context đã tìm được:
-
-1. **Xây dựng câu lệnh (prompt)**: gồm vai trò chuyên gia lịch sử Việt Nam + lịch sử chat (2 tin gần nhất) + ngữ cảnh (tối đa 8000 ký tự) + câu hỏi người dùng
-2. **Ước tính số token**: ≈ tổng ký tự ÷ 3. Nếu vượt 10.000 token → tự động cắt ngữ cảnh
-3. **Gọi Groq API**: mô hình LLaMA 3.3 70B, nhiệt độ 0.3, tối đa 4096 token đầu ra
-4. **Câu trả lời**: có cấu trúc, bằng tiếng Việt, theo trình tự Bối cảnh → Diễn biến → Kết quả
-
-#### 🟤 Khối 6: Trạng thái phiên (màu tím đậm — góc trên trái)
-
-Lưu trữ tạm thời để hỗ trợ hội thoại liên tục:
-
-- **Lịch sử trò chuyện**: các cặp hỏi-đáp trước đó
-- **Ngữ cảnh hiện tại**: context đã tìm kiếm gần nhất
-- **Chủ đề hiện tại**: chủ đề đang được thảo luận
-
-> Trạng thái phiên được **lưu lại** sau mỗi câu trả lời và được **đọc ra** tại bước Phát hiện câu hỏi tiếp nối để quyết định tìm kiếm mới hay tái sử dụng context cũ.
+1. **Phát hiện câu trả lời thiếu thông tin** — Nhận diện các pattern như "không có thông tin", "tài liệu không đề cập"...
+2. **Tìm kiếm Wikipedia (Tiếng Việt)** — Trích xuất keyword từ câu hỏi, gọi API Wikipedia tiếng Việt để tìm bài viết liên quan (`wiki_crawler.py`).
+3. **Thu thập nội dung trang Wikipedia** — Crawl nội dung bài Wikipedia, làm sạch HTML, loại bỏ phần không cần thiết.
+4. **Chia đoạn văn bản Wikipedia** — Chia nội dung wiki thành các chunk nhỏ (chunk_size=500, overlap=80).
+5. **Lưu tự động vào ChromaDB** — Các chunk Wikipedia được lưu vào cùng ChromaDB với metadata `origin: "wikipedia"`. **Đây là cơ chế tự học**: lần sau khi có câu hỏi tương tự, hệ thống sẽ tìm thấy data ngay trong DB mà không cần crawl lại.
+6. **Hỏi LLM với ngữ cảnh từ Wikipedia** — Gửi nội dung wiki cho LLM để sinh câu trả lời, kèm ghi chú `(Nguồn: Wikipedia)`.
+7. **Câu trả lời Wikipedia tốt?**
+     - **Đủ** → Lưu lịch sử → Trả kết quả cuối cùng cho người dùng.
+     - **Không đủ** → Trả lời bằng extractive fallback hoặc thông báo không tìm được thông tin.
 
 ---
 
@@ -110,34 +87,42 @@ Lưu trữ tạm thời để hỗ trợ hội thoại liên tục:
 │                   (rag_chain_pg.py)                          │
 │                                                              │
 │  1. Nhận câu hỏi → Phát hiện follow-up / chủ đề mới        │
-│  2. Hybrid search: Keyword mapping + Embedding search        │
-│  3. Ghép context + câu hỏi → Gửi đến LLM (Groq)           │
+│  2. Embedding search (cosine similarity) trong ChromaDB      │
+│  3. Ghép context + câu hỏi → Gửi đến LLM                   │
 │  4. LLM sinh câu trả lời → Trả về người dùng               │
+│  5. Nếu thiếu thông tin → Wiki Crawler tự động              │
 └──────────┬─────────────────────┬────────────────────────────┘
            │                     │
            ▼                     ▼
 ┌──────────────────┐  ┌──────────────────────────────────────┐
-│   LLM (Groq      │  │           CHROMADB DATABASE           │
-│   LLaMA 3.3 70B) │  │          (data/chromadb/)             │
-│                   │  │                                       │
-│  Sinh câu trả    │  │  • Collection: vietnam_history         │
-│  lời từ context  │  │  • Embedding: multilingual-MiniLM     │
-│                   │  │  • Similarity: cosine                 │
-│                   │  │  • ~5890 chunks                       │
-└──────────────────┘  └──────────────────────────────────────┘
-                                 ▲
-                                 │ Nạp dữ liệu
-           ┌─────────────────────┴──────────────────────┐
-           │                                             │
-┌──────────▼──────────┐              ┌───────────────────▼───┐
-│  DATA PROCESSING    │              │   DATA COLLECTION     │
-│  (run_pipeline.py)  │              │   (bulk_crawl.py)     │
-│                     │              │                       │
-│  Đọc file .txt     │              │  Crawl Wikipedia VN   │
-│  → Chia chunks     │              │  → Chia chunks        │
-│  → Tạo embedding   │              │  → Tạo embedding      │
-│  → Lưu ChromaDB   │              │  → Lưu ChromaDB       │
-└─────────────────────┘              └───────────────────────┘
+│   LLM PROVIDERS  │  │           CHROMADB DATABASE           │
+│                  │  │          (data/chromadb/)             │
+│  Groq (chính)    │  │                                       │
+│  LLaMA 3.3 70B  │  │  • Collection: vietnam_history         │
+│                  │  │  • Embedding: multilingual-e5-base     │
+│  Gemini (backup) │  │  • Similarity: cosine                 │
+│  2.5-flash/      │  │  • Prefix: query/passage              │
+│  2.0-flash/lite  │  └──────────────────────────────────────┘
+│                  │             ▲
+│  Extractive      │             │ Nạp dữ liệu
+│  Fallback (cục   │             │
+│  bộ, khi LLM    │  ┌──────────┴────────────────────────────┐
+│  không khả dụng) │  │         DATA PROCESSING               │
+└──────────────────┘  │        (run_pipeline.py)               │
+                      │                                        │
+           ┌──────────┤  Đọc file PDF → Chia chunks           │
+           │          │  → Tạo embedding → Lưu ChromaDB       │
+           │          └────────────────────────────────────────┘
+           │
+           ▼
+┌──────────────────────────────────────┐
+│         WIKI CRAWLER                  │
+│        (wiki_crawler.py)              │
+│                                       │
+│  Crawl Wikipedia tiếng Việt           │
+│  → Chunk + Lưu vào ChromaDB          │
+│  → Cơ chế tự học                      │
+└──────────────────────────────────────┘
 ```
 
 ---
@@ -147,25 +132,22 @@ Lưu trữ tạm thời để hỗ trợ hội thoại liên tục:
 ### 1. Luồng nạp dữ liệu (Offline)
 
 ```
-File .txt (data/raw/)          Wikipedia tiếng Việt
-        │                              │
-        ▼                              ▼
-   loader.py                    wiki_crawler.py
-   (đọc file)                  (tìm kiếm Wikipedia)
-        │                              │
-        ▼                              ▼
-   chunking.py                  source_manager.py
-   (chia nhỏ text,             (quản lý URL đã crawl)
-    chunk_size=800,                    │
-    overlap=200)                       ▼
-        │                      dynamic_indexing.py
-        ▼                              │
-   indexing.py                         │
-        │                              │
-        └──────────┬───────────────────┘
-                   ▼
-              ChromaDB
-         (tạo embedding + lưu persistent)
+File PDF (data/pdf/)
+        │
+        ▼
+   loader.py
+   (đọc file PDF bằng pypdf)
+        │
+        ▼
+   chunking.py
+   (chia nhỏ text,
+    chunk_size=800,
+    overlap=200)
+        │
+        ▼
+   indexing.py
+   (tạo embedding bằng multilingual-e5-base
+    + lưu ChromaDB persistent)
 ```
 
 ### 2. Luồng hỏi đáp (Online)
@@ -183,16 +165,19 @@ Người dùng nhập câu hỏi
         │    → Kiểm tra câu hỏi tiếp nối hay chủ đề mới
         │    → Giữ/xóa context theo session
         │
-        ├──► Hybrid Search
-        │    ├─ Keyword mapping (KEYWORD_SOURCE_MAP)
-        │    │  → Match từ khóa → lấy chunks từ file nguồn
-        │    └─ Embedding search (ChromaDB cosine similarity)
-        │       → Tìm top_k chunks gần nhất
-        │    → Kết hợp kết quả, loại trùng, giới hạn token
+        ├──► Embedding Search (ChromaDB cosine similarity)
+        │    → Source-priority search (ưu tiên nguồn match tên file)
+        │    → Keyword boosting (khi không match nguồn)
+        │    → Tìm top_k chunks gần nhất, loại trùng, giới hạn token
         │
-        ├──► Groq LLM API (LLaMA 3.3 70B)
+        ├──► Gọi LLM (Groq → Gemini → Extractive fallback)
         │    → Sinh câu trả lời từ context + câu hỏi
         │    → SYSTEM_PROMPT: chuyên gia lịch sử Việt Nam
+        │
+        ├──► Auto Wiki Crawl (nếu PDF không đủ thông tin)
+        │    → wiki_crawler.py: crawl Wikipedia tiếng Việt
+        │    → Lưu chunks mới vào ChromaDB (tự học)
+        │    → Hỏi LLM lại với context Wikipedia
         │
         └──► Lưu lịch sử chat theo session
 ```
@@ -204,39 +189,33 @@ Người dùng nhập câu hỏi
 ```
 DoAn2-ChatbotLichSu/
 ├── backend/                    # Xử lý logic chính
-│   ├── config.py               # Cấu hình API keys
-│   ├── db_config.py            # Cấu hình kết nối (legacy)
-│   ├── pg_vector_store.py      # Vector store (legacy)
-│   ├── rag_chain_pg.py         # RAG Engine chính (ChromaDB + Groq)
-│   ├── context_evaluator.py    # Đánh giá chất lượng context
+│   ├── config.py               # Cấu hình API keys (GROQ_API_KEY, NUM_RESULTS)
+│   ├── rag_chain_pg.py         # RAG Engine chính (ChromaDB + Groq/Gemini)
+│   ├── wiki_crawler.py         # Crawl Wikipedia tiếng Việt + lưu ChromaDB
 │   └── api.py                  # FastAPI endpoints
 │
-├── data_collection/            # Thu thập dữ liệu
-│   ├── bulk_crawl.py           # Crawl hàng loạt từ Wikipedia
-│   ├── wiki_crawler.py         # Tìm kiếm & lấy nội dung Wikipedia
-│   ├── web_scraper.py          # Scrape nội dung từ URL bất kỳ
-│   ├── google_search.py        # Tìm kiếm Google (bổ sung)
-│   └── source_manager.py       # Quản lý nguồn đã crawl
-│
 ├── data_processing/            # Xử lý dữ liệu
-│   ├── loader.py               # Đọc file .txt từ data/raw/
+│   ├── loader.py               # Đọc file PDF từ data/pdf/
 │   ├── chunking.py             # Chia văn bản thành chunks (800/200)
-│   ├── indexing.py             # Index dữ liệu vào ChromaDB
-│   ├── dynamic_indexing.py     # Index realtime (khi crawl mới)
+│   ├── indexing.py             # Index dữ liệu vào ChromaDB (E5 embedding)
+│   ├── dynamic_indexing.py     # Index PDF mới realtime
 │   └── run_pipeline.py         # Pipeline xử lý tổng hợp
 │
 ├── frontend/                   # Giao diện người dùng
 │   └── app.py                  # Streamlit UI (Gemini dark theme)
 │
 ├── data/                       # Dữ liệu
-│   ├── raw/                    # 23 file .txt lịch sử Việt Nam
+│   ├── pdf/                    # File PDF lịch sử Việt Nam
 │   ├── processed/              # Dữ liệu đã xử lý (chunks.json)
-│   ├── chromadb/               # ChromaDB persistent storage
-│   └── crawl_log.json          # Log các URL đã crawl
+│   └── chromadb/               # ChromaDB persistent storage
 │
 ├── evaluation/                 # Đánh giá chất lượng
+├── docs/                       # Tài liệu, sơ đồ
 ├── .env                        # Biến môi trường (API keys)
 ├── requirements.txt            # Thư viện Python
+├── debug_context.py            # Script debug context search
+├── debug_search.py             # Script debug embedding search
+├── test_conversation.py        # Script test hội thoại
 └── README.md                   # Tài liệu này
 ```
 
@@ -248,30 +227,20 @@ DoAn2-ChatbotLichSu/
 
 | File | Chức năng |
 |---|---|
-| **`config.py`** | Đọc API keys từ `.env` (GROQ_API_KEY, GEMINI_API_KEY). |
-| **`rag_chain_pg.py`** | **RAG Engine chính.** Hybrid search (keyword + embedding) trên ChromaDB → ghép context → gửi Groq LLM → trả câu trả lời. Hỗ trợ follow-up detection, session context, giới hạn token tự động. |
-| **`context_evaluator.py`** | Đánh giá xem context tìm được có đủ để trả lời câu hỏi không. |
-| **`api.py`** | FastAPI server cung cấp REST API endpoints (`/ask`, `/stats`). |
-
-### 🌐 Data Collection
-
-| File | Chức năng |
-|---|---|
-| **`bulk_crawl.py`** | Crawl hàng loạt chủ đề lịch sử từ Wikipedia tiếng Việt. |
-| **`wiki_crawler.py`** | Tìm kiếm từ khóa trên Wikipedia tiếng Việt bằng API, lấy nội dung toàn bộ bài viết. |
-| **`web_scraper.py`** | Scrape nội dung từ URL bất kỳ (BeautifulSoup). |
-| **`google_search.py`** | Tìm kiếm Google để bổ sung nguồn dữ liệu. |
-| **`source_manager.py`** | Quản lý danh sách URL đã crawl (`crawl_log.json`) để tránh trùng lặp. |
+| **`config.py`** | Đọc API keys từ `.env` (`GROQ_API_KEY`). Cấu hình `NUM_RESULTS` (số kết quả trả về). |
+| **`rag_chain_pg.py`** | **RAG Engine chính.** Embedding search trên ChromaDB → ghép context → gửi LLM (Groq/Gemini) → trả câu trả lời. Hỗ trợ follow-up detection, session context, source-priority search, keyword boosting, extractive fallback, auto Wiki crawl khi PDF thiếu thông tin. |
+| **`wiki_crawler.py`** | **Wikipedia Crawler.** Trích xuất keywords từ câu hỏi → tìm kiếm bài Wikipedia tiếng Việt → crawl nội dung → chia chunks (chunk_size=500, overlap=80) → lưu vào ChromaDB. Cơ chế tự học: lần sau không cần crawl lại. |
+| **`api.py`** | FastAPI server cung cấp REST API endpoints (`/chat`, `/clear`, `/`). Chạy trên `http://localhost:8000`. |
 
 ### ⚙️ Data Processing
 
 | File | Chức năng |
 |---|---|
-| **`loader.py`** | Đọc các file `.txt` từ thư mục `data/raw/`, trích xuất tiêu đề và nội dung. |
-| **`chunking.py`** | Chia văn bản dài thành chunks bằng `RecursiveCharacterTextSplitter` (chunk_size=800, overlap=200). |
-| **`indexing.py`** | **ChromaDB operations.** Tạo collection, thêm documents với embedding, tìm kiếm cosine similarity, thống kê. |
-| **`dynamic_indexing.py`** | Index dữ liệu mới crawl vào ChromaDB ngay lập tức (realtime). |
-| **`run_pipeline.py`** | Pipeline tổng hợp: `loader.py` → `chunking.py` → `indexing.py`. |
+| **`loader.py`** | Đọc các file PDF từ thư mục `data/pdf/` (bao gồm thư mục con) bằng thư viện `pypdf`. |
+| **`chunking.py`** | Chia văn bản dài thành chunks bằng `RecursiveCharacterTextSplitter` (chunk_size=800, overlap=200). Lọc chunks quá ngắn (<50 ký tự). |
+| **`indexing.py`** | **ChromaDB operations.** Sử dụng model `intfloat/multilingual-e5-base` (768 chiều) với custom `E5EmbeddingFunction` hỗ trợ prefix `"query: "` / `"passage: "`. Tạo collection, thêm documents với embedding, tìm kiếm cosine similarity, thống kê. |
+| **`dynamic_indexing.py`** | Index file PDF mới vào ChromaDB ngay lập tức (realtime) mà không cần rebuild toàn bộ. |
+| **`run_pipeline.py`** | Pipeline tổng hợp: `loader.py` → `chunking.py` → `indexing.py` → test search. |
 
 ### 🎨 Frontend
 
@@ -283,26 +252,6 @@ DoAn2-ChatbotLichSu/
 
 ## 🗄️ Cơ sở dữ liệu (ChromaDB)
 
-### Tại sao chuyển từ PostgreSQL sang ChromaDB?
-
-| Tiêu chí | PostgreSQL | ChromaDB |
-|---|---|---|
-| **Cài đặt** | Cần server riêng, cấu hình phức tạp | Không cần server, embedded database |
-| **Vector search** | Cần extension pgvector | Tích hợp sẵn, chuyên biệt cho vector |
-| **Embedding** | Phải tự tính + lưu thủ công | Tự động tạo embedding khi thêm document |
-| **Persistent storage** | Cần PostgreSQL service chạy | Lưu file trực tiếp trên disk |
-| **Triển khai** | Cần cài PostgreSQL trên mỗi máy | Chỉ cần `pip install chromadb` |
-| **Phụ thuộc** | `psycopg2`, PostgreSQL server | Chỉ `chromadb` package |
-| **Hiệu suất nhỏ** | Overhead cho dataset nhỏ | Tối ưu cho dataset vừa & nhỏ |
-
-### Ưu điểm của ChromaDB cho dự án này
-
-1. **Zero-config**: Không cần cài đặt hay cấu hình server database — chạy trực tiếp trong Python process.
-2. **Portable**: Toàn bộ data nằm trong thư mục `data/chromadb/`, dễ dàng copy, backup, chia sẻ.
-3. **Auto-embedding**: ChromaDB tự động tạo vector embedding khi thêm document, không cần viết code riêng.
-4. **Chuyên biệt cho RAG**: Được thiết kế cho Retrieval-Augmented Generation — cosine similarity search nhanh, metadata filtering.
-5. **Dễ triển khai**: Sinh viên/người dùng chỉ cần clone repo + `pip install` là chạy được, không cần cài database ngoài.
-
 ### Cấu hình ChromaDB
 
 | Thuộc tính | Giá trị |
@@ -310,85 +259,35 @@ DoAn2-ChatbotLichSu/
 | **Client** | `PersistentClient` (lưu trên disk) |
 | **Đường dẫn** | `data/chromadb/` |
 | **Collection** | `vietnam_history` |
-| **Embedding model** | `paraphrase-multilingual-MiniLM-L12-v2` |
+| **Embedding model** | `intfloat/multilingual-e5-base` (768 chiều) |
+| **Embedding function** | Custom `E5EmbeddingFunction` (prefix `"query: "` / `"passage: "`) |
 | **Distance metric** | Cosine similarity |
-| **Số chunks hiện tại** | ~5890 chunks |
+
+### Ưu điểm của ChromaDB
+
+1. **Zero-config**: Không cần cài đặt hay cấu hình server database.
+2. **Portable**: Toàn bộ data nằm trong thư mục `data/chromadb/`, dễ dàng copy, backup, chia sẻ.
+3. **Custom Embedding**: Sử dụng `E5EmbeddingFunction` tự quản lý mode query/passage cho model E5.
+4. **Chuyên biệt cho RAG**: Cosine similarity search nhanh, metadata filtering.
+5. **Dễ triển khai**: Chỉ cần clone repo + `pip install` là chạy được.
 
 ---
 
 ## 📊 Dataset
 
+
 ### Nguồn dữ liệu
 
-Dataset bao gồm **23 file .txt** về lịch sử Việt Nam, chia thành 2 loại:
-
-#### 📄 Tài liệu biên soạn thủ công (9 file)
-
-Các file được viết/biên soạn với nội dung chuyên sâu, có cấu trúc rõ ràng:
-
-| STT | File | Chủ đề | Thời kỳ |
-|-----|------|--------|---------|
-| 1 | `KHỞI NGHĨA HAI BÀ TRƯNG.txt` | Khởi nghĩa Hai Bà Trưng | 40-43 SCN |
-| 2 | `CHIẾN THẮNG BẠCH ĐẰNG NĂM 938.txt` | Trận Bạch Đằng - Ngô Quyền | 938 |
-| 3 | `TRIỀU ĐẠI NHÀ LÝ (1009 - 1225).txt` | Triều đại nhà Lý | 1009-1225 |
-| 4 | `TRIỀU ĐẠI NHÀ TRẦN (1226 - 1400).txt` | Triều đại nhà Trần | 1226-1400 |
-| 5 | `CÁCH MẠNG THÁNG TÁM NĂM 1945.txt` | Cách mạng Tháng Tám | 1945 |
-| 6 | `CHIẾN DỊCH ĐIỆN BIÊN PHỦ (1954).txt` | Chiến dịch Điện Biên Phủ | 1954 |
-| 7 | `KHÁNG CHIẾN CHỐNG MỸ CỨU NƯỚC (1954 - 1975).txt` | Kháng chiến chống Mỹ | 1954-1975 |
-| 8 | `Hà Nội 12 ngày đêm.txt` | Chiến dịch Linebacker II | 1972 |
-| 9 | `Thành cổ Quảng Trị và Hiệp định Paris.txt` | 81 ngày đêm Quảng Trị & Hiệp định Paris | 1972-1973 |
-
-#### 🌐 Dữ liệu crawl từ Wikipedia (14 file)
-
-Crawl tự động từ Wikipedia tiếng Việt qua `wiki_crawler.py`:
-
-| STT | File | Chủ đề |
-|-----|------|--------|
-| 1 | `wiki_Bắc_thuộc.txt` | Thời kỳ Bắc thuộc |
-| 2 | `wiki_Cách_mạng_Tháng_Tám.txt` | Cách mạng Tháng Tám (Wikipedia) |
-| 3 | `wiki_Chiến_dịch_Biên_giới.txt` | Chiến dịch Biên giới 1950 |
-| 4 | `wiki_Chiến_dịch_đánh_Tống_10751076.txt` | Lý Thường Kiệt đánh Tống |
-| 5 | `wiki_Chiến_tranh_biên_giới_Việt_Nam__Campuchia.txt` | Chiến tranh biên giới Việt-Campuchia |
-| 6 | `wiki_Chiến_tranh_biên_giới_Việt__Trung_1979.txt` | Chiến tranh biên giới phía Bắc 1979 |
-| 7 | `wiki_Chiến_tranh_Đông_Dương.txt` | Chiến tranh Đông Dương |
-| 8 | `wiki_Chiến_tranh_Việt_Nam.txt` | Chiến tranh Việt Nam |
-| 9 | `wiki_Lê_Duẩn.txt` | Tổng Bí thư Lê Duẩn |
-| 10 | `wiki_Nhà_Hậu_Lê.txt` | Triều đại nhà Hậu Lê |
-| 11 | `wiki_Nhà_Lê_trung_hưng.txt` | Nhà Lê trung hưng |
-| 12 | `wiki_Quân_đội_nhân_dân_Việt_Nam.txt` | Quân đội Nhân dân Việt Nam |
-| 13 | `wiki_Thời_bao_cấp.txt` | Thời kỳ bao cấp |
-| 14 | `wiki_Việt_Nam.txt` | Tổng quan Việt Nam |
-
-### Phạm vi thời gian
-
-```
-40 SCN ─────────── 938 ──── 1009-1400 ──── 1428-1789 ──── 1945-1979
-  │                  │          │               │              │
-Hai Bà          Bạch Đằng   Lý - Trần     Hậu Lê        Kháng chiến
-Trưng           Ngô Quyền                  Lê Trung Hưng  Chống Pháp/Mỹ
-                                                           Biên giới
-```
+Dataset sử dụng **file PDF** về lịch sử Việt Nam (thư mục `data/pdf/`) và **Wikipedia tiếng Việt** (tự động bổ sung khi thiếu thông tin).
 
 ### Xử lý dữ liệu
 
 | Bước | Công cụ | Chi tiết |
 |------|---------|----------|
-| **Đọc file** | `loader.py` | Đọc 23 file `.txt` từ `data/raw/`, encoding UTF-8 |
+| **Đọc file** | `loader.py` | Đọc file `.pdf` từ `data/pdf/` bằng `pypdf` |
 | **Chia chunks** | `chunking.py` | `RecursiveCharacterTextSplitter`, chunk_size=800, overlap=200 |
-| **Tạo embedding** | ChromaDB + Sentence Transformers | Model: `paraphrase-multilingual-MiniLM-L12-v2` (384 chiều) |
+| **Tạo embedding** | ChromaDB + Sentence Transformers | Model: `intfloat/multilingual-e5-base` (768 chiều, prefix query/passage) |
 | **Lưu trữ** | `indexing.py` | ChromaDB persistent storage tại `data/chromadb/` |
-| **Kết quả** | | **~5890 chunks** được index |
-
-### Hybrid Search
-
-Hệ thống sử dụng **hybrid search** kết hợp 2 phương pháp:
-
-1. **Keyword Search** (KEYWORD_SOURCE_MAP): Ánh xạ từ khóa → file nguồn chính xác
-   - Ví dụ: "điện biên phủ" → `CHIẾN DỊCH ĐIỆN BIÊN PHỦ (1954).txt`
-   - Ưu tiên cao hơn, lấy toàn bộ chunks từ file nguồn (tối đa 15 chunks)
-2. **Embedding Search** (ChromaDB cosine similarity): Tìm chunks tương đồng ngữ nghĩa
-   - Top-k = 8 chunks
-   - Bổ sung kết quả khi keyword search không đủ
 
 ---
 
@@ -398,6 +297,7 @@ Hệ thống sử dụng **hybrid search** kết hợp 2 phương pháp:
 
 - Python 3.10+
 - API Key: Groq (miễn phí tại [console.groq.com](https://console.groq.com))
+- API Key: Gemini (miễn phí tại [aistudio.google.com](https://aistudio.google.com)) — dùng làm LLM dự phòng
 
 > **Không cần cài đặt database ngoài** — ChromaDB chạy embedded trong Python.
 
@@ -415,19 +315,27 @@ pip install -r requirements.txt
 
 ```env
 GROQ_API_KEY=gsk_xxxxxxxxxxxxxxxx
+GROQ_MODEL=llama-3.3-70b-versatile
+
+GEMINI_API_KEY=AIzaSyxxxxxxxxxxxxxxxxx
+GEMINI_MODEL=gemini-2.5-flash
 ```
 
-### Bước 3: Nạp dữ liệu vào ChromaDB
+> **Lưu ý:** `GEMINI_API_KEY` là tùy chọn nhưng **nên có** để hệ thống tự động chuyển sang Gemini khi Groq hết quota.
+
+### Bước 3: Thêm file PDF
+
+Đặt các file PDF lịch sử Việt Nam vào thư mục `data/pdf/`.
+
+> **Lưu ý:** Khi hệ thống không tìm thấy thông tin trong PDF, dữ liệu Wikipedia sẽ được tự động crawl, chunk và lưu vào ChromaDB cho các lần truy vấn sau.
+
+### Bước 4: Nạp dữ liệu vào ChromaDB
 
 ```bash
-# Nạp từ file .txt (data/raw/) → ChromaDB
 python data_processing/run_pipeline.py
-
-# (Tùy chọn) Crawl thêm từ Wikipedia
-python data_collection/bulk_crawl.py
 ```
 
-### Bước 4: Chạy chatbot
+### Bước 5: Chạy chatbot
 
 ```bash
 streamlit run frontend/app.py --server.port 8502
@@ -444,12 +352,15 @@ Mở trình duyệt tại **http://localhost:8502**
 | **Python 3.10+** | Ngôn ngữ lập trình chính |
 | **Streamlit** | Giao diện web chatbot (Gemini dark theme) |
 | **ChromaDB** | Vector database (embedded, persistent) |
-| **Sentence Transformers** | Tạo vector embedding (`paraphrase-multilingual-MiniLM-L12-v2`) |
-| **Groq API** | LLM LLaMA 3.3 70B (sinh câu trả lời) |
+| **Sentence Transformers** | Tạo vector embedding (`intfloat/multilingual-e5-base`, 768 chiều) |
+| **Groq API** | LLM LLaMA 3.3 70B — sinh câu trả lời (provider chính) |
+| **Google Gemini API** | LLM dự phòng (2.5-flash → 2.0-flash → 2.0-flash-lite) |
 | **LangChain** | Text splitting (`RecursiveCharacterTextSplitter`) |
-| **Wikipedia API** | Nguồn dữ liệu chính |
-| **BeautifulSoup** | Web scraping |
+| **FastAPI + Uvicorn** | REST API server (`/chat`, `/clear`) |
+| **pypdf** | Đọc và trích xuất text từ file PDF |
+| **Wikipedia API + BeautifulSoup** | Crawl và xử lý nội dung Wikipedia tiếng Việt |
 | **python-dotenv** | Quản lý biến môi trường |
+| **requests** | HTTP requests cho Wikipedia API |
 
 ---
 
@@ -458,6 +369,6 @@ Mở trình duyệt tại **http://localhost:8502**
 **MSSV: 226148**
 
 **Đồ án 2** — Chatbot Tra Cứu Lịch Sử Việt Nam
-Sử dụng kỹ thuật RAG + ChromaDB + Groq LLM
+Sử dụng kỹ thuật RAG + ChromaDB + Groq/Gemini LLM
 
 🇻🇳 *"Dân ta phải biết sử ta, cho tường gốc tích nước nhà Việt Nam"* — Hồ Chí Minh
