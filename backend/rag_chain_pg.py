@@ -6,6 +6,7 @@ Sử dụng ChromaDB (embedding search) + Groq LLM + Gemini fallback.
 import os
 import sys
 import re
+import tempfile
 import unicodedata
 from collections import Counter
 from dotenv import load_dotenv
@@ -31,7 +32,9 @@ print(f"[RAG] .env exists: {os.path.exists(ENV_PATH)}")
 
 load_dotenv(ENV_PATH, override=True)
 
-from indexing import search, get_stats, get_collection
+from indexing import search, get_stats, get_collection, create_vector_database
+from loader import load_pdf_file
+from chunking import chunk_documents
 from groq import Groq
 import google.generativeai as genai
 
@@ -993,3 +996,119 @@ def clear_history_pg(session_id: str = "default"):
         del _session_contexts[f"{session_id}_sources"]
     if session_id in _session_topics:
         del _session_topics[session_id]
+
+
+def process_uploaded_pdf(uploaded_file) -> dict:
+    """
+    Xử lý file PDF được người dùng upload:
+    1. Lưu tạm file
+    2. Đọc nội dung PDF
+    3. Chunk văn bản
+    4. Index vào ChromaDB
+    Returns: {"success": bool, "filename": str, "text": str, "chunks_count": int}
+    """
+    try:
+        filename = uploaded_file.name
+        print(f"[PDF] 📄 Processing uploaded file: {filename}")
+
+        # Lưu file tạm
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+            tmp.write(uploaded_file.getbuffer())
+            tmp_path = tmp.name
+
+        # Đọc nội dung PDF
+        text = load_pdf_file(tmp_path)
+
+        if not text or not text.strip():
+            os.unlink(tmp_path)
+            return {
+                "success": False,
+                "filename": filename,
+                "text": "",
+                "chunks_count": 0,
+                "error": "Không thể trích xuất text từ PDF.",
+            }
+
+        # Chunk văn bản
+        documents = [{"content": text, "source": filename}]
+        chunks = chunk_documents(documents, chunk_size=800, chunk_overlap=200)
+
+        if chunks:
+            # Index vào ChromaDB
+            create_vector_database(chunks)
+            print(f"[PDF] ✅ Indexed {len(chunks)} chunks from {filename}")
+
+        # Xóa file tạm
+        os.unlink(tmp_path)
+
+        return {
+            "success": True,
+            "filename": filename,
+            "text": text,
+            "chunks_count": len(chunks),
+        }
+
+    except Exception as e:
+        print(f"[PDF] ❌ Error processing PDF: {e}")
+        return {
+            "success": False,
+            "filename": getattr(uploaded_file, 'name', 'unknown'),
+            "text": "",
+            "chunks_count": 0,
+            "error": str(e),
+        }
+
+
+def summarize_pdf_text(text: str, filename: str, session_id: str = "default") -> dict:
+    """
+    Tóm tắt nội dung PDF đã upload.
+    """
+    if not text or not text.strip():
+        return {
+            "answer": "Không có nội dung để tóm tắt.",
+            "sources": [filename],
+            "evaluation": {"sufficient": False, "confidence": "Thấp"},
+        }
+
+    # Giới hạn text để tránh vượt token limit
+    max_chars = 10000
+    truncated = text[:max_chars]
+    if len(text) > max_chars:
+        last_cut = max(truncated.rfind("."), truncated.rfind("\n"))
+        if last_cut > 0:
+            truncated = truncated[:last_cut + 1]
+        truncated += "\n\n[... nội dung được rút gọn ...]"
+
+    system_msg = (
+        "Bạn là trợ lý AI chuyên tóm tắt tài liệu. "
+        "Hãy tóm tắt nội dung tài liệu sau một cách chi tiết, có cấu trúc rõ ràng. "
+        "Sử dụng tiếng Việt. Trình bày theo các mục chính với bullet points."
+    )
+
+    user_msg = f"""TÀI LIỆU CẦN TÓM TẮT (nguồn: {filename}):
+{truncated}
+
+Hãy tóm tắt nội dung chính của tài liệu trên. Trình bày rõ ràng, có cấu trúc."""
+
+    messages = [
+        {"role": "system", "content": system_msg},
+        {"role": "user", "content": user_msg},
+    ]
+
+    try:
+        answer = _call_llm_with_fallback(messages)
+        if not answer:
+            answer = "Không thể tóm tắt tài liệu lúc này. Vui lòng thử lại."
+
+        return {
+            "answer": answer,
+            "sources": [filename],
+            "evaluation": {"sufficient": True, "confidence": "Cao"},
+        }
+    except Exception as e:
+        print(f"[PDF] ❌ Summarize error: {e}")
+        return {
+            "answer": f"Lỗi khi tóm tắt: {e}",
+            "sources": [filename],
+            "evaluation": {"sufficient": False, "confidence": "Thấp"},
+        }

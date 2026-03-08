@@ -11,9 +11,9 @@ from sentence_transformers import SentenceTransformer
 # Cấu hình ChromaDB
 CHROMA_PERSIST_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "data", "chromadb"
+    "data", "csdl_vector"
 )
-COLLECTION_NAME = "vietnam_history"
+COLLECTION_NAME = "lich_su_viet_nam"
 EMBEDDING_MODEL = "intfloat/multilingual-e5-base"
 
 

@@ -80,7 +80,16 @@ Khi tài liệu PDF không chứa đủ thông tin để trả lời, hệ thố
 │             Gemini-style Dark Theme + Sidebar                │
 │         Hỗ trợ nhiều cuộc trò chuyện song song              │
 └──────────────────────┬──────────────────────────────────────┘
-                       │ Câu hỏi người dùng
+                       │ Text Input / Auth Actions
+                       ▼
+┌─────────────────────────────────────────────────────────────┐
+│                  XÁC THỰC & BẢO MẬT (MỚI)                   │
+│                (auth.py, email_service.py)                   │
+│                                                              │
+│  • Đăng nhập, Đăng ký (Mã băm SHA-256 + Salt)             │
+│  • Quên mật khẩu (Gửi OTP qua email bằng SMTP)            │
+└──────────────────────┬──────────────────────────────────────┘
+                       │ Sau khi đăng nhập
                        ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                     RAG CHAIN ENGINE                         │
@@ -95,13 +104,13 @@ Khi tài liệu PDF không chứa đủ thông tin để trả lời, hệ thố
            │                     │
            ▼                     ▼
 ┌──────────────────┐  ┌──────────────────────────────────────┐
-│   LLM PROVIDERS  │  │           CHROMADB DATABASE           │
-│                  │  │          (data/chromadb/)             │
-│  Groq (chính)    │  │                                       │
-│  LLaMA 3.3 70B  │  │  • Collection: vietnam_history         │
-│                  │  │  • Embedding: multilingual-e5-base     │
-│  Gemini (backup) │  │  • Similarity: cosine                 │
-│  2.5-flash/      │  │  • Prefix: query/passage              │
+│   LLM PROVIDERS  │  │           CƠ SỞ DỮ LIỆU               │
+│                  │  │                                       │
+│  Groq (chính)    │  │  [ChromaDB] Vector Database           │
+│  LLaMA 3.3 70B  │  │  • Lịch sử VN (`lich_su_viet_nam`)    │
+│                  │  │                                       │
+│  Gemini (backup) │  │  [SQLite] Relational DB               │
+│  2.5-flash/      │  │  • Users, Passwords, Conversations    │
 │  2.0-flash/lite  │  └──────────────────────────────────────┘
 │                  │             ▲
 │  Extractive      │             │ Nạp dữ liệu
@@ -129,9 +138,27 @@ Khi tài liệu PDF không chứa đủ thông tin để trả lời, hệ thố
 
 ## 🔄 Luồng dữ liệu
 
-### 1. Luồng nạp dữ liệu (Offline)
+### 1. Luồng Xác Thực (Auth Flow)
 
+```text
+Chưa đăng nhập (Khách)
+        │
+        ▼
+   app.py (Render form Đăng nhập / Đăng ký / Quên MK)
+        │
+        ├──► auth.py (Đăng ký / Đăng nhập)
+        │    → Mã hóa password bằng SHA-256 + Salt
+        │    → Kiểm tra đối chiếu trong SQLite (bảng `nguoi_dung`)
+        │
+        └──► email_service.py (Quên mật khẩu)
+             → Tạo mã OTP 6 số lưu vào SQLite (bảng `khoi_phuc_mat_khau`)
+             → Gửi HTTP/SMTP Email chứa OTP
+             → Người dùng nhập OTP → Cập nhật mật khẩu mới
 ```
+
+### 2. Luồng nạp dữ liệu (Offline)
+
+```text
 File PDF (data/pdf/)
         │
         ▼
@@ -150,7 +177,7 @@ File PDF (data/pdf/)
     + lưu ChromaDB persistent)
 ```
 
-### 2. Luồng hỏi đáp (Online)
+### 3. Luồng hỏi đáp (Online)
 
 ```
 Người dùng nhập câu hỏi
@@ -207,15 +234,12 @@ DoAn2-ChatbotLichSu/
 ├── data/                       # Dữ liệu
 │   ├── pdf/                    # File PDF lịch sử Việt Nam
 │   ├── processed/              # Dữ liệu đã xử lý (chunks.json)
-│   └── chromadb/               # ChromaDB persistent storage
+│   └── csdl_vector/            # ChromaDB persistent storage
 │
 ├── evaluation/                 # Đánh giá chất lượng
 ├── docs/                       # Tài liệu, sơ đồ
 ├── .env                        # Biến môi trường (API keys)
 ├── requirements.txt            # Thư viện Python
-├── debug_context.py            # Script debug context search
-├── debug_search.py             # Script debug embedding search
-├── test_conversation.py        # Script test hội thoại
 └── README.md                   # Tài liệu này
 ```
 
@@ -227,10 +251,13 @@ DoAn2-ChatbotLichSu/
 
 | File | Chức năng |
 |---|---|
-| **`config.py`** | Đọc API keys từ `.env` (`GROQ_API_KEY`). Cấu hình `NUM_RESULTS` (số kết quả trả về). |
-| **`rag_chain_pg.py`** | **RAG Engine chính.** Embedding search trên ChromaDB → ghép context → gửi LLM (Groq/Gemini) → trả câu trả lời. Hỗ trợ follow-up detection, session context, source-priority search, keyword boosting, extractive fallback, auto Wiki crawl khi PDF thiếu thông tin. |
-| **`wiki_crawler.py`** | **Wikipedia Crawler.** Trích xuất keywords từ câu hỏi → tìm kiếm bài Wikipedia tiếng Việt → crawl nội dung → chia chunks (chunk_size=500, overlap=80) → lưu vào ChromaDB. Cơ chế tự học: lần sau không cần crawl lại. |
-| **`api.py`** | FastAPI server cung cấp REST API endpoints (`/chat`, `/clear`, `/`). Chạy trên `http://localhost:8000`. |
+| **`config.py`** | Đọc API keys từ `.env`. Cấu hình `NUM_RESULTS` (số kết quả trả về). |
+| **`db.py`** | Quản lý kết nối và các thao tác với CSDL SQLite (`data/chatbot.db`). Chứa các bảng `nguoi_dung`, `khoi_phuc_mat_khau`, `cuoc_tro_chuyen`, `tin_nhan`. |
+| **`auth.py`** | Xử lý logic xác thực người dùng (đăng nhập, đăng ký, quên mật khẩu). Tích hợp mã hóa mật khẩu bằng SHA-256 + Salt. |
+| **`email_service.py`** | Sử dụng `smtplib` để gửi email chứa mã OTP khôi phục mật khẩu thông qua Gmail SMTP. Hỗ trợ fallback: hiển thị OTP trực tiếp trên giao diện nếu lỗi mạng/SMTP. |
+| **`rag_chain_pg.py`** | **RAG Engine chính.** Embedding search trên ChromaDB → ghép context → gửi LLM (Groq/Gemini) → trả câu trả lời. Hỗ trợ follow-up detection, keyword boosting, extractive fallback, auto Wiki crawl. |
+| **`wiki_crawler.py`** | **Wikipedia Crawler.** Trích xuất keywords → tìm kiếm bài Wikipedia tiếng Việt → crawl nội dung → chia chunks → lưu ChromaDB (tự học). |
+| **`api.py`** | FastAPI server cung cấp REST API endpoints (`/chat`, `/clear`, `/`). |
 
 ### ⚙️ Data Processing
 
@@ -246,19 +273,35 @@ DoAn2-ChatbotLichSu/
 
 | File | Chức năng |
 |---|---|
-| **`app.py`** | Giao diện chatbot Streamlit. Gemini-style dark theme (#131314). Sidebar lịch sử trò chuyện, welcome screen, suggestion pills, hỗ trợ nhiều cuộc trò chuyện song song. |
+| **`app.py`** | Giao diện chatbot Streamlit. Xử lý Đăng nhập/Đăng ký. Hỗ trợ tóm tắt trực tiếp tài liệu PDF khi người dùng yêu cầu qua chat. Ẩn nguồn tham khảo theo yêu cầu để giao diện gọn gàng hơn. |
 
 ---
 
-## 🗄️ Cơ sở dữ liệu (ChromaDB)
+## 🗄️ Cơ sở dữ liệu
 
-### Cấu hình ChromaDB
+Hệ thống sử dụng hai loại cơ sở dữ liệu: **SQLite** (cho dữ liệu người dùng) và **ChromaDB** (cho dữ liệu vector).
+
+### 1. Cơ sở dữ liệu Cấu trúc (SQLite)
+
+- **Đường dẫn**: `data/chatbot.db`
+- **Công năng**: Quản lý tài khoản, xác thực và lưu lịch sử trò chuyện theo từng người dùng.
+- **Cấu trúc bảng chính**:
+  - `nguoi_dung`: Lưu thông tin đăng nhập (email, tên, `mat_khau_bam`, `phuong_thuc_dang_nhap`).
+  - `khoi_phuc_mat_khau`: Quản lý mã OTP khôi phục mật khẩu.
+  - `cuoc_tro_chuyen` & `tin_nhan`: Lưu trữ lịch sử chat liên kết với từng `ma_nguoi_dung`.
+
+**🔐 Bảo mật Mật khẩu:**
+Mật khẩu người dùng không lưu trữ dưới dạng văn bản thuần túy. Hệ thống sử dụng công nghệ băm **SHA-256 kết hợp với Salt ngẫu nhiên** (thêm chuỗi ký tự ngẫu nhiên vào mật khẩu trước khi băm) để chống lại các cuộc tấn công dò mật khẩu (Dictionary Attack, Rainbow Tables).
+
+### 2. Cơ sở dữ liệu Vector (ChromaDB)
+
+#### Cấu hình ChromaDB
 
 | Thuộc tính | Giá trị |
 |---|---|
 | **Client** | `PersistentClient` (lưu trên disk) |
-| **Đường dẫn** | `data/chromadb/` |
-| **Collection** | `vietnam_history` |
+| **Đường dẫn** | `data/csdl_vector/` |
+| **Collection** | `lich_su_viet_nam` |
 | **Embedding model** | `intfloat/multilingual-e5-base` (768 chiều) |
 | **Embedding function** | Custom `E5EmbeddingFunction` (prefix `"query: "` / `"passage: "`) |
 | **Distance metric** | Cosine similarity |
@@ -266,7 +309,7 @@ DoAn2-ChatbotLichSu/
 ### Ưu điểm của ChromaDB
 
 1. **Zero-config**: Không cần cài đặt hay cấu hình server database.
-2. **Portable**: Toàn bộ data nằm trong thư mục `data/chromadb/`, dễ dàng copy, backup, chia sẻ.
+2. **Portable**: Toàn bộ data nằm trong thư mục `data/csdl_vector/`, dễ dàng copy, backup, chia sẻ.
 3. **Custom Embedding**: Sử dụng `E5EmbeddingFunction` tự quản lý mode query/passage cho model E5.
 4. **Chuyên biệt cho RAG**: Cosine similarity search nhanh, metadata filtering.
 5. **Dễ triển khai**: Chỉ cần clone repo + `pip install` là chạy được.
@@ -287,7 +330,7 @@ Dataset sử dụng **file PDF** về lịch sử Việt Nam (thư mục `data/p
 | **Đọc file** | `loader.py` | Đọc file `.pdf` từ `data/pdf/` bằng `pypdf` |
 | **Chia chunks** | `chunking.py` | `RecursiveCharacterTextSplitter`, chunk_size=800, overlap=200 |
 | **Tạo embedding** | ChromaDB + Sentence Transformers | Model: `intfloat/multilingual-e5-base` (768 chiều, prefix query/passage) |
-| **Lưu trữ** | `indexing.py` | ChromaDB persistent storage tại `data/chromadb/` |
+| **Lưu trữ** | `indexing.py` | ChromaDB persistent storage tại `data/csdl_vector/` |
 
 ---
 
@@ -352,10 +395,13 @@ Mở trình duyệt tại **http://localhost:8502**
 | **Python 3.10+** | Ngôn ngữ lập trình chính |
 | **Streamlit** | Giao diện web chatbot (Gemini dark theme) |
 | **ChromaDB** | Vector database (embedded, persistent) |
+| **SQLite3** | Quản lý dữ liệu người dùng, xác thực và lịch sử chat |
 | **Sentence Transformers** | Tạo vector embedding (`intfloat/multilingual-e5-base`, 768 chiều) |
 | **Groq API** | LLM LLaMA 3.3 70B — sinh câu trả lời (provider chính) |
 | **Google Gemini API** | LLM dự phòng (2.5-flash → 2.0-flash → 2.0-flash-lite) |
 | **LangChain** | Text splitting (`RecursiveCharacterTextSplitter`) |
+| **hashlib (SHA-256)** | Mã hóa mật khẩu an toàn kết hợp Salt ngẫu nhiên |
+| **smtplib + email.mime** | Gửi email chứa mã OTP khôi phục mật khẩu |
 | **FastAPI + Uvicorn** | REST API server (`/chat`, `/clear`) |
 | **pypdf** | Đọc và trích xuất text từ file PDF |
 | **Wikipedia API + BeautifulSoup** | Crawl và xử lý nội dung Wikipedia tiếng Việt |

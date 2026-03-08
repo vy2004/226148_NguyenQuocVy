@@ -13,3 +13,4 @@ groq>=0.4.0
 google-generativeai>=0.8.0
 requests
 beautifulsoup4
+yagmail
