@@ -782,7 +782,7 @@ def create_new_conversation():
     conv_id = f"conv_{int(time.time() * 1000)}"
     st.session_state.conversations[conv_id] = {"title": "Cuộc trò chuyện mới", "messages": []}
     st.session_state.current_conv_id = conv_id
-    save_conversation(ma_cuoc_tro_chuyen=conv_id, title="Cuộc trò chuyện mới", ma_nguoi_dung=user["id"])
+    save_conversation(ma_cuoc_tro_chuyen=conv_id, tieu_de="Cuộc trò chuyện mới", ma_nguoi_dung=user["id"])
     clear_history_pg(session_id=conv_id)
     return conv_id
 
