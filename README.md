@@ -33,6 +33,8 @@ Hệ thống chatbot thông minh sử dụng kỹ thuật **RAG (Retrieval-Augme
 ![RAG Diagram](docs/RAG.png)
 ## Sơ đồ BFD
 ![BFD Diagram](docs/bfd.PNG)
+## Sơ đồ Use Case
+![Use Case Diagram](docs/UseCase.png)
 
 ### Luồng hoạt động chi tiết
 
