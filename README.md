@@ -31,7 +31,7 @@ Hệ thống chatbot thông minh sử dụng kỹ thuật **RAG (Retrieval-Augme
 ---
 ## Sơ đồ RAG Pipeline, BFD và UseCase
 ![RAG Diagram](docs/RAG.png)
-![BFD Diagram](docs/bfd.PNG)
+![BFD Diagram](docs/bfd.png)
 ![UseCase Diagram](docs/UseCase.png)
 
 ### Luồng hoạt động chi tiết
