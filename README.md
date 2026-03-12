@@ -29,10 +29,13 @@ Hệ thống chatbot thông minh sử dụng kỹ thuật **RAG (Retrieval-Augme
 | **Nguồn dữ liệu** | File PDF về lịch sử Việt Nam + Wikipedia (tự động bổ sung khi thiếu thông tin) |
 
 ---
-## Sơ đồ RAG Pipeline, BFD và UseCase
+## Sơ đồ RAG Pipeline, BFD, UseCase, DFD các cấp
 ![RAG Diagram](docs/RAG.png)
 ![BFD Diagram](docs/bfd.png)
 ![UseCase Diagram](docs/UseCase.png)
+![DFD0 Diagram](docs/DFD0.png)
+![DFD1 Diagram](docs/DFD1.png)
+![DFD2 Diagram](docs/DFD2.png)
 
 ### Luồng hoạt động chi tiết
 
@@ -231,7 +234,6 @@ DoAn2-ChatbotLichSu/
 - Đăng nhập, đăng xuất
 - Quên mật khẩu, gửi mã OTP qua email (SMTP Gmail), xác thực OTP để đặt lại mật khẩu
 - Lưu thông tin người dùng, hash mật khẩu an toàn (SHA-256 + salt)
-- Hỗ trợ đăng nhập nhanh bằng Google (nếu có)
 
 ### 2. Quản lý tài liệu lịch sử
 - Tiếp nhận, tải lên và xử lý file PDF lịch sử Việt Nam
@@ -252,7 +254,7 @@ DoAn2-ChatbotLichSu/
 ### 4. Quản lý trò chuyện & kết quả
 - Lưu lịch sử trò chuyện, tải lại lịch sử theo session/người dùng
 - Lưu câu hỏi, nguồn tham khảo, kết quả trả lời
-- Xóa lịch sử trò chuyện, cập nhật tiêu đề cuộc trò chuyện
+- Xóa lịch sử trò chuyện
 - Trả kết quả cho người dùng qua giao diện hoặc API
 
 ### 5. API & giao diện
