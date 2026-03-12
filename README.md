@@ -223,32 +223,47 @@ DoAn2-ChatbotLichSu/
 
 ---
 
-## 📝 Chức năng từng file
 
-### 🔧 Backend
+## 🛠️ Chức năng hệ thống
 
-| File | Chức năng |
-|---|---|
-| **`config.py`** | Đọc API keys từ `.env` (`GROQ_API_KEY`). Cấu hình `NUM_RESULTS` (số kết quả trả về). |
-| **`rag_chain_pg.py`** | **RAG Engine chính.** Embedding search trên ChromaDB → ghép context → gửi LLM (Groq/Gemini) → trả câu trả lời. Hỗ trợ follow-up detection, session context, source-priority search, keyword boosting, extractive fallback, auto Wiki crawl khi PDF thiếu thông tin. |
-| **`wiki_crawler.py`** | **Wikipedia Crawler.** Trích xuất keywords từ câu hỏi → tìm kiếm bài Wikipedia tiếng Việt → crawl nội dung → chia chunks (chunk_size=500, overlap=80) → lưu vào ChromaDB. Cơ chế tự học: lần sau không cần crawl lại. |
-| **`api.py`** | FastAPI server cung cấp REST API endpoints (`/chat`, `/clear`, `/`). Chạy trên `http://localhost:8000`. |
+### 1. Quản lý người dùng & xác thực
+- Đăng ký tài khoản bằng email & mật khẩu
+- Đăng nhập, đăng xuất
+- Quên mật khẩu, gửi mã OTP qua email (SMTP Gmail), xác thực OTP để đặt lại mật khẩu
+- Lưu thông tin người dùng, hash mật khẩu an toàn (SHA-256 + salt)
+- Hỗ trợ đăng nhập nhanh bằng Google (nếu có)
 
-### ⚙️ Data Processing
+### 2. Quản lý tài liệu lịch sử
+- Tiếp nhận, tải lên và xử lý file PDF lịch sử Việt Nam
+- Trích xuất văn bản từ PDF, chia đoạn (chunking) thông minh
+- Tạo embedding cho từng đoạn văn bản (Sentence Transformers E5)
+- Lập chỉ mục và lưu trữ vector vào ChromaDB
+- Tự động cập nhật tài liệu mới khi có file PDF mới
+- Học bổ sung dữ liệu từ Wikipedia tiếng Việt khi thiếu thông tin
 
-| File | Chức năng |
-|---|---|
-| **`loader.py`** | Đọc các file PDF từ thư mục `data/pdf/` (bao gồm thư mục con) bằng thư viện `pypdf`. |
-| **`chunking.py`** | Chia văn bản dài thành chunks bằng `RecursiveCharacterTextSplitter` (chunk_size=800, overlap=200). Lọc chunks quá ngắn (<50 ký tự). |
-| **`indexing.py`** | **ChromaDB operations.** Sử dụng model `intfloat/multilingual-e5-base` (768 chiều) với custom `E5EmbeddingFunction` hỗ trợ prefix `"query: "` / `"passage: "`. Tạo collection, thêm documents với embedding, tìm kiếm cosine similarity, thống kê. |
-| **`dynamic_indexing.py`** | Index file PDF mới vào ChromaDB ngay lập tức (realtime) mà không cần rebuild toàn bộ. |
-| **`run_pipeline.py`** | Pipeline tổng hợp: `loader.py` → `chunking.py` → `indexing.py` → test search. |
+### 3. Xử lý câu hỏi lịch sử
+- Nhận câu hỏi từ người dùng (qua giao diện hoặc API)
+- Phát hiện câu hỏi tiếp nối (follow-up) hoặc chủ đề mới
+- Tìm kiếm ngữ cảnh liên quan trong ChromaDB (cosine similarity, ưu tiên nguồn phù hợp)
+- Tạo prompt và gọi LLM (Groq LLaMA 3.3 70B, Gemini 2.5 Flash dự phòng)
+- Tóm tắt tài liệu, sinh câu trả lời, fallback sang Wikipedia hoặc extractive nếu thiếu thông tin
+- Kiểm tra thiếu thông tin, tự động crawl và lưu Wikipedia
 
-### 🎨 Frontend
+### 4. Quản lý trò chuyện & kết quả
+- Lưu lịch sử trò chuyện, tải lại lịch sử theo session/người dùng
+- Lưu câu hỏi, nguồn tham khảo, kết quả trả lời
+- Xóa lịch sử trò chuyện, cập nhật tiêu đề cuộc trò chuyện
+- Trả kết quả cho người dùng qua giao diện hoặc API
 
-| File | Chức năng |
-|---|---|
-| **`app.py`** | Giao diện chatbot Streamlit. Gemini-style dark theme (#131314). Sidebar lịch sử trò chuyện, welcome screen, suggestion pills, hỗ trợ nhiều cuộc trò chuyện song song. |
+### 5. API & giao diện
+- REST API endpoints: hỏi đáp (`/chat`), xóa lịch sử (`/clear`), kiểm tra trạng thái (`/`)
+- Giao diện web Streamlit: dark theme, sidebar lịch sử, nhiều cuộc trò chuyện song song, gợi ý câu hỏi, xác thực người dùng
+- Hỗ trợ upload PDF, xem lại lịch sử, đổi mật khẩu, xác thực OTP
+
+### 6. Hệ thống email & bảo mật
+- Gửi email OTP đặt lại mật khẩu qua Gmail SMTP
+- Hiển thị OTP trực tiếp nếu không gửi được email
+- Lưu trữ an toàn thông tin người dùng, hội thoại, OTP, lịch sử truy vấn trong SQLite
 
 ---
 
