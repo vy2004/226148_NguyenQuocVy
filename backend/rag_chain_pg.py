@@ -53,7 +53,7 @@ GEMINI_FALLBACK_MODELS = [
 ]
 
 MAX_TOTAL_CHUNKS = 20
-MAX_CONTEXT_CHARS = 12000
+MAX_CONTEXT_CHARS = 20000
 MAX_HISTORY_TURNS = 2
 
 # Fallback: đọc trực tiếp từ .env nếu load_dotenv thất bại
