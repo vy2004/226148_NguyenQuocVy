@@ -29,8 +29,10 @@ Hệ thống chatbot thông minh sử dụng kỹ thuật **RAG (Retrieval-Augme
 | **Nguồn dữ liệu** | File PDF về lịch sử Việt Nam + Wikipedia (tự động bổ sung khi thiếu thông tin) |
 
 ---
-## Sơ đồ RAG Pipeline
+## Sơ đồ RAG Pipeline, BFD và UseCase
 ![RAG Diagram](docs/RAG.png)
+![BFD Diagram](docs/bfd.png)
+![UseCase Diagram](docs/UseCase.png)
 
 ### Luồng hoạt động chi tiết
 
