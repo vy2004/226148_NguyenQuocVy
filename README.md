@@ -77,6 +77,8 @@ Chatbot hỏi đáp về lịch sử Việt Nam sử dụng kỹ thuật **RAG (
 
 - Upload PDF trực tiếp trên giao diện Streamlit.
 - Tóm tắt nhanh nội dung file vừa tải lên.
+- **Kiểm tra trùng lặp trước khi index**: hệ thống tự động kiểm tra tài liệu đã được index chưa, nếu đã index thì bỏ qua để tránh mất thời gian.
+- ID chunk ổn định theo tên nguồn (`tenfile__chunk_0`, `tenfile__chunk_1`, ...) tránh ghi đè giữa các tài liệu.
 - Admin có thể thêm/xóa tài liệu hệ thống và tái lập chỉ mục.
 - Hỗ trợ index offline từ thư mục `data/pdf/`.
 
@@ -169,10 +171,10 @@ chatbot-lichsu/
 │   └── processed/                # Dữ liệu xử lý trung gian
 ├── data_processing/
 │   ├── chunking.py               # Chia đoạn văn bản
-│   ├── dynamic_indexing.py       # Hỗ trợ cập nhật chỉ mục
-│   ├── indexing.py               # Tạo/search vector database
+│   ├── dynamic_indexing.py       # Index tăng dần, kiểm tra trùng lặp
+│   ├── indexing.py               # Vector DB: index, search, kiểm tra trùng, xóa theo nguồn
 │   ├── loader.py                 # Đọc PDF
-│   └── run_pipeline.py           # Chạy pipeline index offline
+│   └── run_pipeline.py           # Pipeline index offline (chỉ index tài liệu mới)
 ├── frontend/
 │   └── app.py                    # Giao diện Streamlit
 ├── scripts/
@@ -217,8 +219,14 @@ chatbot-lichsu/
 ### Index tài liệu
 
 ```text
-PDF → loader.py → chunking.py → indexing.py → ChromaDB
+PDF → loader.py → kiểm tra đã index chưa (get_indexed_sources)
+  ├── Đã index → bỏ qua
+  └── Chưa index → chunking.py → indexing.py (ID: source__chunk_i) → ChromaDB
 ```
+
+- `run_pipeline.py`: lọc bỏ tài liệu đã index trước khi xử lý, chỉ index tài liệu mới.
+- `process_uploaded_pdf`: kiểm tra `is_document_indexed()` trước khi index, dùng `add_new_documents()` thêm tăng dần thay vì ghi đè.
+- `delete_chunks_by_source()`: xóa chunk theo tên file khi cần index lại 1 tài liệu cụ thể.
 
 ### Hỏi đáp
 
