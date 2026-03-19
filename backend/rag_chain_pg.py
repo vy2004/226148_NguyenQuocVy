@@ -32,9 +32,10 @@ print(f"[RAG] .env exists: {os.path.exists(ENV_PATH)}")
 
 load_dotenv(ENV_PATH, override=True)
 
-from indexing import search, get_stats, get_collection, create_vector_database
+from indexing import search, get_stats, get_collection, create_vector_database, is_document_indexed
 from loader import load_pdf_file
 from chunking import chunk_documents
+from dynamic_indexing import add_new_documents
 from groq import Groq
 import google.generativeai as genai
 
@@ -1017,24 +1018,32 @@ from backend.db import save_tai_lieu
 def process_uploaded_pdf(uploaded_file, user_id=None) -> dict:
     """
     Xử lý file PDF được người dùng upload:
-    1. Lưu tạm file
-    2. Đọc nội dung PDF
-    3. Chunk văn bản
-    4. Index vào ChromaDB
-    5. Lưu metadata vào bảng tai_lieu_nguoi_dung nếu có user_id
+    1. Kiểm tra tài liệu đã index chưa
+    2. Lưu file vào thư mục runtime
+    3. Đọc nội dung PDF
+    4. Index tăng dần vào ChromaDB (add_new_documents)
+    5. Lưu metadata vào bảng tai_lieu nếu có user_id
     Returns: {"success": bool, "filename": str, "text": str, "chunks_count": int}
     """
     try:
         filename = uploaded_file.name
         print(f"[PDF] 📄 Processing uploaded file: {filename}")
 
-        # Lưu file vào thư mục dữ liệu runtime để dùng lại ở các lần sau
+        if is_document_indexed(filename):
+            print(f"[PDF] ⏭️ '{filename}' đã được index trước đó, bỏ qua")
+            return {
+                "success": True,
+                "filename": filename,
+                "text": "",
+                "chunks_count": 0,
+                "already_indexed": True,
+            }
+
         os.makedirs(PDF_DIR, exist_ok=True)
         file_path = os.path.join(PDF_DIR, filename)
         with open(file_path, "wb") as f:
             f.write(uploaded_file.getbuffer())
 
-        # Đọc nội dung PDF
         text = load_pdf_file(file_path)
 
         if not text or not text.strip():
@@ -1046,16 +1055,10 @@ def process_uploaded_pdf(uploaded_file, user_id=None) -> dict:
                 "error": "Không thể trích xuất text từ PDF.",
             }
 
-        # Chunk văn bản
-        documents = [{"content": text, "source": filename}]
-        chunks = chunk_documents(documents, chunk_size=800, chunk_overlap=200)
+        documents = [{"content": text.strip(), "source": filename}]
+        chunks_added = add_new_documents(documents)
+        print(f"[PDF] ✅ Indexed {chunks_added} chunks from {filename}")
 
-        if chunks:
-            # Index vào ChromaDB
-            create_vector_database(chunks)
-            print(f"[PDF] ✅ Indexed {len(chunks)} chunks from {filename}")
-
-        # Lưu metadata vào bảng tai_lieu_nguoi_dung nếu có user_id
         if user_id:
             ma_tai_lieu = str(uuid.uuid4())
             save_tai_lieu(
@@ -1070,7 +1073,7 @@ def process_uploaded_pdf(uploaded_file, user_id=None) -> dict:
             "success": True,
             "filename": filename,
             "text": text,
-            "chunks_count": len(chunks),
+            "chunks_count": chunks_added,
         }
 
     except Exception as e:

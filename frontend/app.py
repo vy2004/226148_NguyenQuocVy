@@ -1077,7 +1077,10 @@ with st.sidebar:
             if result["success"]:
                 st.session_state.uploaded_pdf_text = result["text"]
                 st.session_state.uploaded_pdf_name = result["filename"]
-                st.markdown(f'<div class="upload-success">✅ <b>{result["filename"]}</b> — {result["chunks_count"]} đoạn</div>', unsafe_allow_html=True)
+                if result.get("already_indexed"):
+                    st.markdown(f'<div class="upload-success">⏭️ <b>{result["filename"]}</b> — đã được index trước đó, không cần xử lý lại</div>', unsafe_allow_html=True)
+                else:
+                    st.markdown(f'<div class="upload-success">✅ <b>{result["filename"]}</b> — {result["chunks_count"]} đoạn</div>', unsafe_allow_html=True)
             else:
                 st.error(f"❌ {result.get('error', 'Lỗi')}")
         else:

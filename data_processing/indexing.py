@@ -95,16 +95,68 @@ def get_collection():
     return collection
 
 
+def get_indexed_sources() -> set:
+    """Trả về tập hợp tên file (source) đã được index trong ChromaDB."""
+    collection = get_collection()
+    total = collection.count()
+    if total == 0:
+        return set()
+
+    batch_size = 10000
+    sources: set = set()
+    for offset in range(0, total, batch_size):
+        result = collection.get(
+            limit=batch_size,
+            offset=offset,
+            include=["metadatas"],
+        )
+        for meta in result.get("metadatas", []):
+            src = (meta or {}).get("source")
+            if src:
+                sources.add(src)
+    return sources
+
+
+def is_document_indexed(source_name: str) -> bool:
+    """Kiểm tra xem tài liệu (theo tên file) đã được index chưa."""
+    collection = get_collection()
+    result = collection.get(
+        where={"source": source_name},
+        limit=1,
+        include=[],
+    )
+    return len(result.get("ids", [])) > 0
+
+
+def delete_chunks_by_source(source_name: str) -> int:
+    """Xóa tất cả chunk thuộc một tài liệu. Trả về số chunk đã xóa."""
+    collection = get_collection()
+    result = collection.get(
+        where={"source": source_name},
+        include=[],
+    )
+    ids_to_delete = result.get("ids", [])
+    if ids_to_delete:
+        collection.delete(ids=ids_to_delete)
+        print(f"[Index] 🗑️ Đã xóa {len(ids_to_delete)} chunks của '{source_name}'")
+    return len(ids_to_delete)
+
+
+def _make_chunk_id(source: str, chunk_index: int) -> str:
+    """Tạo ID ổn định cho chunk dựa trên tên nguồn + thứ tự."""
+    return f"{source}__chunk_{chunk_index}"
+
+
 def create_vector_database(chunks: List[Dict]):
     """
     Tạo vector database từ danh sách chunks.
     Mỗi chunk có dạng: {"content": "...", "metadata": {...}}
+    ID mỗi chunk = "{source}__chunk_{i}" để tránh ghi đè giữa các tài liệu.
     """
     if not chunks:
         print("❌ Không có chunks để index!")
         return
 
-    # Chuyển sang mode "passage" khi index tài liệu
     embedding_fn = get_embedding_function()
     embedding_fn.set_mode("passage")
 
@@ -114,7 +166,9 @@ def create_vector_database(chunks: List[Dict]):
     metadatas = []
     ids = []
 
-    for i, chunk in enumerate(chunks):
+    per_source_counter: Dict[str, int] = {}
+
+    for chunk in chunks:
         content = chunk.get("content", "").strip()
         if not content:
             continue
@@ -127,9 +181,13 @@ def create_vector_database(chunks: List[Dict]):
             else:
                 clean_metadata[k] = str(v)
 
+        source = clean_metadata.get("source", "unknown")
+        idx = per_source_counter.get(source, 0)
+        per_source_counter[source] = idx + 1
+
         documents.append(content)
         metadatas.append(clean_metadata)
-        ids.append(f"chunk_{i}")
+        ids.append(_make_chunk_id(source, idx))
 
     batch_size = 500
     total = len(documents)
@@ -143,7 +201,6 @@ def create_vector_database(chunks: List[Dict]):
         )
         print(f"  ✅ Đã index {end}/{total} chunks")
 
-    # Chuyển lại mode "query" sau khi index xong
     embedding_fn.set_mode("query")
 
     print(f"\n✅ Tổng cộng {total} chunks đã được index vào ChromaDB")
