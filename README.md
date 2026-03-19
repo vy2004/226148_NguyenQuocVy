@@ -37,29 +37,6 @@ Chatbot hỏi đáp về lịch sử Việt Nam sử dụng kỹ thuật **RAG (
 
 ---
 
-## Sơ đồ dự án
-
-### Sơ đồ kiến trúc RAG
-![Sơ đồ kiến trúc RAG](docs/rag-diagram.drawio.png)
-
-### Activity Diagram
-![Activity Diagram](docs/Activity.png)
-
-### Use Case tổng quát
-![Use Case tổng quát](docs/UseCase_tong_quat.png)
-
-### Use Case người dùng
-![Use Case người dùng](docs/Usecase_User.png)
-
-### Use Case admin
-![Use Case admin](docs/Usecase_Admin.png)
-
-### Database Diagram
-![Database Diagram](docs/DatabaseDiagram.png)
-
-### ERD
-![ERD](docs/ERD.png)
-
 ---
 
 ## Tính năng
