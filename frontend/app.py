@@ -97,13 +97,13 @@ st.markdown("""
     .auth-title {
         font-size: 24px;
         font-weight: 700;
-        color: #1a1a1a;
+        color: #000000 !important;
         text-align: center;
         margin-bottom: 4px;
     }
     .auth-subtitle {
         font-size: 14px;
-        color: #888;
+        color: #555555 !important;
         text-align: center;
         margin-bottom: 24px;
     }
@@ -111,40 +111,51 @@ st.markdown("""
         text-align: center;
         margin-top: 20px;
         font-size: 11px;
-        color: #bbb;
+        color: #888888 !important;
     }
 
-    /* Auth form inputs — override Streamlit defaults */
+    /* Auth form inputs — white background, black text */
     .auth-container .stTextInput > div > div > input,
     .auth-container input[type="text"],
     .auth-container input[type="password"] {
         background: #ffffff !important;
-        color: #1a1a1a !important;
-        border: 1.5px solid #e0e0e0 !important;
+        color: #000000 !important;
+        border: 1.5px solid #d0d0d0 !important;
         border-radius: 12px !important;
         padding: 12px 16px !important;
         font-size: 14px !important;
     }
     .auth-container .stTextInput > div > div > input:focus,
     .auth-container input:focus {
-        border-color: #a78bfa !important;
-        box-shadow: 0 0 0 3px rgba(167,139,250,0.15) !important;
+        border-color: #7c3aed !important;
+        box-shadow: 0 0 0 3px rgba(124,58,237,0.15) !important;
     }
     .auth-container .stTextInput > div > div > input::placeholder,
     .auth-container input::placeholder {
-        color: #b0b0b0 !important;
+        color: #999999 !important;
     }
 
-    /* Auth form labels */
+    /* Auth form labels — black text */
     .auth-container .stTextInput > label,
     .auth-container label {
-        color: #444 !important;
+        color: #000000 !important;
         font-size: 14px !important;
         font-weight: 500 !important;
         margin-bottom: 4px !important;
     }
 
-    /* Auth primary buttons (Đăng nhập, Đăng ký, etc.) */
+    /* Auth all text black */
+    .auth-container, .auth-container * {
+        color: #000000 !important;
+    }
+    .auth-container .auth-subtitle {
+        color: #555555 !important;
+    }
+    .auth-container .auth-footer {
+        color: #888888 !important;
+    }
+
+    /* Auth primary buttons — purple */
     .auth-container .stFormSubmitButton > button,
     .auth-container .stFormSubmitButton > button:active,
     .auth-container .stFormSubmitButton > button:focus,
@@ -168,11 +179,11 @@ st.markdown("""
         opacity: 0.95 !important;
     }
 
-    /* Auth secondary buttons (Quay lại, Tạo tài khoản, etc.) */
+    /* Auth secondary buttons — purple outline */
     .auth-container .stButton > button {
         background: #ffffff !important;
-        color: #444 !important;
-        border: 1.5px solid #e0e0e0 !important;
+        color: #7c3aed !important;
+        border: 1.5px solid #7c3aed !important;
         border-radius: 12px !important;
         font-weight: 500 !important;
         font-size: 13px !important;
@@ -181,15 +192,15 @@ st.markdown("""
         transition: all 0.2s !important;
     }
     .auth-container .stButton > button:hover {
-        border-color: #a78bfa !important;
-        color: #7c3aed !important;
-        background: #faf5ff !important;
+        border-color: #6d28d9 !important;
+        color: #ffffff !important;
+        background: #7c3aed !important;
     }
 
-    /* Auth form container — white card style */
+    /* Auth form container — white card */
     .auth-container [data-testid="stForm"] {
         background: #ffffff !important;
-        border: 1px solid #f0f0f0 !important;
+        border: 1px solid #e0e0e0 !important;
         border-radius: 16px !important;
         padding: 24px !important;
         box-shadow: 0 2px 12px rgba(0,0,0,0.04) !important;
