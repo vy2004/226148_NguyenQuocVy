@@ -7,6 +7,7 @@ import json
 import sqlite3
 import time
 from datetime import datetime
+from backend.admin_config import get_admin_emails
 from backend.runtime_paths import DB_PATH
 
 
@@ -35,6 +36,19 @@ def _table_exists(conn, table: str) -> bool:
         (table,),
     ).fetchone()
     return row is not None
+
+
+def _promote_bootstrap_admins(conn) -> None:
+    """Đảm bảo các email admin mặc định luôn có vai trò admin."""
+    admin_emails = sorted(get_admin_emails())
+    if not admin_emails:
+        return
+
+    placeholders = ",".join("?" for _ in admin_emails)
+    conn.execute(
+        f"UPDATE nguoi_dung SET vai_tro = 'admin' WHERE lower(email) IN ({placeholders})",
+        admin_emails,
+    )
 
 
 def init_db():
@@ -216,6 +230,7 @@ def init_db():
                 """)
                 print("[DB] Migration: updated tin_nhan_tham_khao FK → tai_lieu")
 
+        _promote_bootstrap_admins(conn)
         conn.commit()
         print(f"[DB] ✅ Database initialized: {DB_PATH}")
     finally:

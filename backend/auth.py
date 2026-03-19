@@ -9,6 +9,7 @@ import string
 import hashlib
 import sqlite3
 from datetime import datetime, timedelta
+from backend.admin_config import is_bootstrap_admin_email
 from backend.runtime_paths import DB_PATH
 
 
@@ -63,11 +64,12 @@ def register_user(email: str, password: str, display_name: str = None) -> dict:
         user_id = str(uuid.uuid4())
         password_hash = _hash_password(password)
         name = display_name or email.split("@")[0]
+        role = "admin" if is_bootstrap_admin_email(email) else "user"
 
         conn.execute(
-            """INSERT INTO nguoi_dung (ma_nguoi_dung, email, mat_khau_bam, ten_hien_thi)
-               VALUES (?, ?, ?, ?)""",
-            (user_id, email, password_hash, name),
+            """INSERT INTO nguoi_dung (ma_nguoi_dung, email, mat_khau_bam, ten_hien_thi, vai_tro)
+               VALUES (?, ?, ?, ?, ?)""",
+            (user_id, email, password_hash, name, role),
         )
         conn.commit()
 
@@ -75,6 +77,7 @@ def register_user(email: str, password: str, display_name: str = None) -> dict:
             "id": user_id,
             "email": email,
             "display_name": name,
+            "role": role,
         }
         print(f"[AUTH] ✅ Đăng ký thành công: {email}")
         return {"success": True, "message": "Đăng ký thành công!", "user": user}
