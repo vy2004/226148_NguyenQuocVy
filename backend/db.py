@@ -9,6 +9,7 @@ import time
 from datetime import datetime
 from backend.admin_config import get_admin_emails
 from backend.runtime_paths import DB_PATH
+from backend.db_sync import schedule_sync as _schedule_sync
 
 
 def _get_connection():
@@ -249,6 +250,7 @@ def save_conversation(ma_cuoc_tro_chuyen: str, tieu_de: str = "Cuộc trò chuy�
         conn.commit()
     finally:
         conn.close()
+    _schedule_sync()
 
 
 def save_message(ma_cuoc_tro_chuyen: str, vai_tro: str, noi_dung: str,
@@ -268,9 +270,11 @@ def save_message(ma_cuoc_tro_chuyen: str, vai_tro: str, noi_dung: str,
             ),
         )
         conn.commit()
-        return cursor.lastrowid
+        lastrowid = cursor.lastrowid
     finally:
         conn.close()
+    _schedule_sync()
+    return lastrowid
 
 
 def save_message_sources(ma_tin_nhan: int, sources: list):
@@ -457,6 +461,7 @@ def delete_conversation(ma_cuoc_tro_chuyen: str):
         print(f"[DB] 🗑️ Deleted conversation: {ma_cuoc_tro_chuyen}")
     finally:
         conn.close()
+    _schedule_sync()
 
 
 # ======================== TÀI LIỆU (GỘP user + admin) ========================
@@ -532,6 +537,7 @@ def save_phan_hoi(ma_tin_nhan: int, loai: str, ma_nguoi_dung: str = None,
         conn.commit()
     finally:
         conn.close()
+    _schedule_sync()
 
 
 def load_phan_hoi_by_tin_nhan(ma_tin_nhan: int) -> list:
@@ -601,9 +607,10 @@ def update_user_role(ma_nguoi_dung: str, vai_tro: str) -> bool:
             (vai_tro, ma_nguoi_dung),
         )
         conn.commit()
-        return True
     finally:
         conn.close()
+    _schedule_sync()
+    return True
 
 
 def lock_user(ma_nguoi_dung: str) -> bool:
@@ -615,9 +622,10 @@ def lock_user(ma_nguoi_dung: str) -> bool:
             (ma_nguoi_dung,),
         )
         conn.commit()
-        return True
     finally:
         conn.close()
+    _schedule_sync()
+    return True
 
 
 def unlock_user(ma_nguoi_dung: str) -> bool:
@@ -629,9 +637,10 @@ def unlock_user(ma_nguoi_dung: str) -> bool:
             (ma_nguoi_dung,),
         )
         conn.commit()
-        return True
     finally:
         conn.close()
+    _schedule_sync()
+    return True
 
 
 # ======================== ADMIN: LỊCH SỬ HỎI ĐÁP TOÀN HỆ THỐNG ========================

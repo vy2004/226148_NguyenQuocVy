@@ -59,6 +59,13 @@ def _copy_file_if_missing(src: str, dst: str) -> None:
         shutil.copy2(src, dst)
 
 
+def _copy_file_always(src: str, dst: str) -> None:
+    """Luôn copy file từ src sang dst (ghi đè nếu đã tồn tại)."""
+    if os.path.exists(src):
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        shutil.copy2(src, dst)
+
+
 def _vector_dir_ready() -> bool:
     return os.path.isdir(VECTOR_DIR) and any(Path(VECTOR_DIR).iterdir())
 
@@ -131,7 +138,8 @@ def bootstrap_space_data(force: bool = False) -> bool:
             _copy_tree(pdf_src, PDF_DIR)
 
         db_src = os.path.join(snapshot_dir, "chatbot.db")
-        _copy_file_if_missing(db_src, DB_PATH)
+        _copy_file_always(db_src, DB_PATH)
+        print(f"[BOOTSTRAP] Đã tải chatbot.db mới nhất từ dataset repo")
 
     meta = {
         "repo_id": repo_id,

@@ -11,6 +11,7 @@ import sqlite3
 from datetime import datetime, timedelta
 from backend.admin_config import is_bootstrap_admin_email
 from backend.runtime_paths import DB_PATH
+from backend.db_sync import schedule_sync as _schedule_sync
 
 
 def _get_connection():
@@ -80,6 +81,7 @@ def register_user(email: str, password: str, display_name: str = None) -> dict:
             "role": role,
         }
         print(f"[AUTH] ✅ Đăng ký thành công: {email}")
+        _schedule_sync()
         return {"success": True, "message": "Đăng ký thành công!", "user": user}
 
     except Exception as e:
@@ -209,6 +211,7 @@ def reset_password(email: str, token: str, new_password: str) -> dict:
         conn.commit()
 
         print(f"[AUTH] ✅ Password reset for: {email}")
+        _schedule_sync()
         return {"success": True, "message": "Đặt lại mật khẩu thành công!"}
 
     finally:
