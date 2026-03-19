@@ -1,5 +1,4 @@
 ---
-<<<<<<< HEAD
 title: Chatbot Lich Su Viet Nam
 emoji: 📚
 colorFrom: blue
