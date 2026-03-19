@@ -2,7 +2,7 @@
 Module db: SQLite persistence layer cho chatbot.
 Lưu trữ conversations và messages vào thư mục dữ liệu runtime.
 """
-
+import os
 import json
 import sqlite3
 import time
