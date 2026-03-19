@@ -91,7 +91,7 @@ def send_reset_email(to_email: str, otp_code: str) -> dict:
     if sent:
         return {
             "success": True,
-            "message": f"Da gui ma OTP den **{to_email}**. Kiem tra hop thu!",
+            "message": f"Đã gửi mã OTP đến **{to_email}**. Kiểm tra hộp thư!",
             "delivery": "email",
         }
 
