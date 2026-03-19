@@ -1,30 +1,25 @@
 """
-Module email_service: Gửi email reset password qua Gmail SMTP.
-Cấu hình trong .env: SMTP_EMAIL, SMTP_PASSWORD (App Password)
-Nếu không gửi được email, hiển thị OTP trực tiếp cho người dùng.
+Module email_service: Gửi email reset password qua Resend API (HTTPS).
+
+Biến môi trường cần có:
+- RESEND_API_KEY
+- RESEND_FROM_EMAIL (ví dụ onboarding@resend.dev hoặc email domain đã verify)
 """
 
 import os
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+
+import requests
 from dotenv import load_dotenv
 
 load_dotenv()
 
-SMTP_EMAIL = os.getenv("SMTP_EMAIL", "")
-SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
-SMTP_SERVER = "smtp.gmail.com"
-SMTP_PORT = 587
+RESEND_API_KEY = os.getenv("RESEND_API_KEY", "").strip()
+RESEND_FROM_EMAIL = os.getenv("RESEND_FROM_EMAIL", "").strip()
+RESEND_API_URL = "https://api.resend.com/emails"
 
 
-def _try_send_smtp(to_email: str, otp_code: str) -> bool:
-    """Thử gửi email qua SMTP. Trả về True nếu thành công."""
-    if not SMTP_EMAIL or not SMTP_PASSWORD:
-        return False
-
-    subject = "🔑 Đặt lại mật khẩu - Chatbot Lịch Sử Việt Nam"
-    html_body = f"""
+def _build_html_body(to_email: str, otp_code: str) -> str:
+    return f"""
     <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 500px; margin: 0 auto;
                 padding: 30px; background: #f9f9f9; border-radius: 12px;">
         <div style="text-align: center; margin-bottom: 24px;">
@@ -54,44 +49,58 @@ def _try_send_smtp(to_email: str, otp_code: str) -> bool:
     </div>
     """
 
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = subject
-    msg["From"] = f"Chatbot Lịch Sử VN <{SMTP_EMAIL}>"
-    msg["To"] = to_email
-    msg.attach(MIMEText(html_body, "html", "utf-8"))
+
+def _try_send_resend(to_email: str, otp_code: str) -> tuple[bool, str]:
+    """Thử gửi mail bằng Resend API. Trả về (success, error_message)."""
+    if not RESEND_API_KEY:
+        return False, "Thiếu RESEND_API_KEY"
+    if not RESEND_FROM_EMAIL:
+        return False, "Thiếu RESEND_FROM_EMAIL"
+
+    payload = {
+        "from": RESEND_FROM_EMAIL,
+        "to": [to_email],
+        "subject": "Dat lai mat khau - Chatbot Lich Su Viet Nam",
+        "html": _build_html_body(to_email, otp_code),
+    }
+    headers = {
+        "Authorization": f"Bearer {RESEND_API_KEY}",
+        "Content-Type": "application/json",
+    }
 
     try:
-        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-            server.starttls()
-            server.login(SMTP_EMAIL, SMTP_PASSWORD)
-            server.sendmail(SMTP_EMAIL, to_email, msg.as_string())
-        print(f"[EMAIL] ✅ Đã gửi email OTP đến: {to_email}")
-        return True
+        response = requests.post(RESEND_API_URL, headers=headers, json=payload, timeout=20)
+        if 200 <= response.status_code < 300:
+            print(f"[EMAIL] Sent OTP via Resend to: {to_email}")
+            return True, ""
+
+        reason = response.text[:400]
+        print(f"[EMAIL] Resend failed ({response.status_code}): {reason}")
+        return False, f"Resend error {response.status_code}: {reason}"
     except Exception as e:
-        print(f"[EMAIL] ⚠️ Không gửi được email: {e}")
-        return False
+        print(f"[EMAIL] Resend request failed: {e}")
+        return False, str(e)
 
 
 def send_reset_email(to_email: str, otp_code: str) -> dict:
     """
     Gửi email chứa mã OTP reset password.
-    Nếu không gửi được, trả về OTP trực tiếp để hiển thị trên UI.
-    Returns: {"success": True/False, "message": str, "show_otp": bool, "otp": str or None}
+    Chỉ trả về success=True khi email gửi thành công.
     """
-    # Thử gửi email qua SMTP
-    if _try_send_smtp(to_email, otp_code):
+    sent, error_reason = _try_send_resend(to_email, otp_code)
+    if sent:
         return {
             "success": True,
-            "message": f"✅ Đã gửi mã OTP đến **{to_email}**. Kiểm tra hộp thư!",
-            "show_otp": False,
-            "otp": None,
+            "message": f"Da gui ma OTP den **{to_email}**. Kiem tra hop thu!",
+            "delivery": "email",
         }
 
-    # Fallback: hiển thị OTP trên giao diện
-    print(f"[EMAIL] 📱 Hiển thị OTP trực tiếp cho: {to_email}")
     return {
-        "success": True,
-        "message": "Mã OTP đã được tạo",
-        "show_otp": True,
-        "otp": otp_code,
+        "success": False,
+        "message": (
+            "Khong the gui email dat lai mat khau. "
+            f"Chi tiet: {error_reason}. "
+            "Kiem tra lai RESEND_API_KEY va RESEND_FROM_EMAIL tren Hugging Face."
+        ),
+        "delivery": "failed",
     }

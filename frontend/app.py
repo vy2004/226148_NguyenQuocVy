@@ -629,6 +629,8 @@ if "auth_page" not in st.session_state:
     st.session_state.auth_page = "login"  # login, register, forgot, reset
 if "reset_email" not in st.session_state:
     st.session_state.reset_email = None
+if "reset_delivery" not in st.session_state:
+    st.session_state.reset_delivery = None
 
 # ============================================================
 # AUTH PAGES — ĐĂNG NHẬP / ĐĂNG KÝ / QUÊN MẬT KHẨU
@@ -752,8 +754,9 @@ def show_forgot_password_page():
                     # Gửi email
                     email_result = send_reset_email(email, result["token"])
                     if email_result["success"]:
-                        st.success(f"Đã gửi mã OTP đến **{email}**. Kiểm tra hộp thư của bạn!")
                         st.session_state.reset_email = email
+                        st.session_state.reset_delivery = email_result.get("delivery")
+                        st.success(email_result["message"])
                         st.session_state.auth_page = "reset"
                         time.sleep(1.5)
                         st.rerun()
@@ -799,6 +802,7 @@ def show_reset_password_page():
                     st.success(result["message"] + " Hãy đăng nhập với mật khẩu mới.")
                     st.session_state.auth_page = "login"
                     st.session_state.reset_email = None
+                    st.session_state.reset_delivery = None
                     time.sleep(1.5)
                     st.rerun()
                 else:
@@ -809,8 +813,12 @@ def show_reset_password_page():
         if st.button("Gửi lại mã OTP", key="resend_otp", use_container_width=True):
             result = create_reset_token(email)
             if result["success"]:
-                send_reset_email(email, result["token"])
-                st.success("Đã gửi lại mã OTP!")
+                email_result = send_reset_email(email, result["token"])
+                st.session_state.reset_delivery = email_result.get("delivery")
+                if email_result["success"]:
+                    st.success(email_result["message"])
+                else:
+                    st.error(email_result["message"])
     with col2:
         if st.button("Quay lại", key="back_to_forgot", use_container_width=True):
             st.session_state.auth_page = "forgot"
