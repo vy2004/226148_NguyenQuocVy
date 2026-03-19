@@ -1,0 +1,14 @@
+venv/
+.git/
+.cursor/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+backend/__pycache__/
+data_processing/__pycache__/
+frontend/__pycache__/
+data/
+docs/
+*.mdj
