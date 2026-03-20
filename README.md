@@ -65,7 +65,6 @@ Chatbot hỏi đáp về lịch sử Việt Nam sử dụng kỹ thuật **RAG (
 - Quên mật khẩu qua OTP 6 chữ số gửi email thật bằng Resend API (hết hạn sau 15 phút).
 - Mật khẩu mã hóa SHA-256 + salt.
 - Phân quyền `user` / `admin`.
-- Admin bootstrap: email admin được cấu hình sẵn trong `admin_config.py` hoặc qua biến môi trường `ADMIN_EMAILS`.
 - Admin có thể đổi vai trò và khóa/mở khóa tài khoản người dùng.
 
 ### 4. Quản lý hội thoại và phản hồi
