@@ -482,6 +482,7 @@ def save_tai_lieu(ma_tai_lieu: str, ma_nguoi_dung: str, ten_file: str,
         conn.commit()
     finally:
         conn.close()
+    _schedule_sync()
 
 
 def update_trang_thai_tai_lieu(ma_tai_lieu: str, trang_thai: str):
@@ -495,6 +496,7 @@ def update_trang_thai_tai_lieu(ma_tai_lieu: str, trang_thai: str):
         conn.commit()
     finally:
         conn.close()
+    _schedule_sync()
 
 
 def load_tai_lieu_by_user(ma_nguoi_dung: str) -> list:
@@ -520,6 +522,7 @@ def delete_tai_lieu(ma_tai_lieu: str):
         conn.commit()
     finally:
         conn.close()
+    _schedule_sync()
 
 
 # ======================== PHẢN HỒI NGƯỜI DÙNG ========================
@@ -725,6 +728,7 @@ def insert_tai_lieu_he_thong(ma_tai_lieu: str, ten_file: str, duong_dan: str):
         conn.commit()
     finally:
         conn.close()
+    _schedule_sync()
 
 
 def delete_tai_lieu_he_thong(ma_tai_lieu: str):
@@ -735,6 +739,7 @@ def delete_tai_lieu_he_thong(ma_tai_lieu: str):
         conn.commit()
     finally:
         conn.close()
+    _schedule_sync()
 
 
 # Khởi tạo DB khi import module

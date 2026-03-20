@@ -16,6 +16,7 @@ if ROOT_DIR not in sys.path:
 from backend import db
 from backend.auth import is_admin
 from backend.runtime_paths import PDF_DIR
+from backend.db_sync import schedule_pdf_upload, schedule_pdf_delete, schedule_vector_sync
 
 
 # ======================== UserService ========================
@@ -108,6 +109,7 @@ def create_system_doc(file_path: str, filename: str = None) -> tuple[bool, str]:
         else:
             shutil.copy2(file_path, dest)
         db.insert_tai_lieu_he_thong(ma_tai_lieu=ma, ten_file=filename, duong_dan=os.path.abspath(dest))
+        schedule_pdf_upload(dest, filename)
         return True, "Đã thêm tài liệu. Hãy chạy 'Tái lập chỉ mục' để cập nhật RAG."
     except Exception as e:
         return False, str(e)
@@ -131,6 +133,7 @@ def update_system_doc(ma_tai_lieu: str, file_path: str = None, ten_file: str = N
             return False, str(e)
     # Cập nhật tên trong DB nếu đổi tên (cần hàm update trong db - hiện chỉ có insert upsert)
     db.insert_tai_lieu_he_thong(ma_tai_lieu=ma_tai_lieu, ten_file=new_name, duong_dan=old_path)
+    schedule_pdf_upload(old_path, new_name)
     return True, "Đã cập nhật. Chạy 'Tái lập chỉ mục' nếu đã thay file."
 
 
@@ -140,12 +143,15 @@ def delete_system_doc(ma_tai_lieu: str) -> tuple[bool, str]:
     if not docs:
         return False, "Không tìm thấy tài liệu"
     path = docs[0].get("duong_dan")
+    filename = docs[0].get("ten_file") or (os.path.basename(path) if path else "")
     try:
         if path and os.path.isfile(path):
             os.remove(path)
     except OSError:
         pass
     db.delete_tai_lieu_he_thong(ma_tai_lieu)
+    if filename:
+        schedule_pdf_delete(filename)
     return True, "Đã xóa tài liệu. Chạy 'Tái lập chỉ mục' để cập nhật RAG."
 
 
@@ -170,6 +176,7 @@ def reindex_all() -> tuple[bool, str]:
         except Exception:
             pass
         create_vector_database(chunks)
+        schedule_vector_sync()
         return True, f"Đã tái lập chỉ mục: {len(documents)} tài liệu, {len(chunks)} chunks."
     except Exception as e:
         return False, f"Lỗi: {str(e)}"
