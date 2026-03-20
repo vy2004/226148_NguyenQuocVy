@@ -173,22 +173,43 @@ def reindex_doc(ma_tai_lieu: str) -> tuple[bool, str]:
 
 
 def reindex_all() -> tuple[bool, str]:
-    """Tái lập chỉ mục Vector DB: chạy pipeline đọc PDF → chunk → ChromaDB."""
+    """
+    Đồng bộ chỉ mục theo kiểu tăng dần (incremental):
+    - Quét thư mục PDF runtime
+    - Chỉ index tài liệu CHƯA có trong ChromaDB
+    Tránh reindex toàn bộ gây chậm khi số tài liệu lớn.
+    """
     try:
-        from data_processing.loader import load_all_documents
-        from data_processing.chunking import chunk_documents
-        from data_processing.indexing import create_vector_database, delete_collection
-        documents = load_all_documents(PDF_DIR)
-        if not documents:
+        from data_processing.dynamic_indexing import add_pdf_file
+
+        if not os.path.isdir(PDF_DIR):
             return False, f"Không có tài liệu PDF trong {PDF_DIR}"
-        chunks = chunk_documents(documents)
-        try:
-            delete_collection()
-        except Exception:
-            pass
-        create_vector_database(chunks)
+
+        pdf_files = [
+            os.path.join(PDF_DIR, f)
+            for f in sorted(os.listdir(PDF_DIR))
+            if f.lower().endswith(".pdf")
+        ]
+        if not pdf_files:
+            return False, f"Không có tài liệu PDF trong {PDF_DIR}"
+
+        indexed_docs = 0
+        indexed_chunks = 0
+        skipped_docs = 0
+
+        for pdf_path in pdf_files:
+            added = add_pdf_file(pdf_path)
+            if added > 0:
+                indexed_docs += 1
+                indexed_chunks += added
+            else:
+                skipped_docs += 1
+
         schedule_vector_sync()
-        return True, f"Đã tái lập chỉ mục: {len(documents)} tài liệu, {len(chunks)} chunks."
+        return True, (
+            f"Đồng bộ xong: thêm mới {indexed_docs} tài liệu / {indexed_chunks} chunks, "
+            f"bỏ qua {skipped_docs} tài liệu đã có."
+        )
     except Exception as e:
         return False, f"Lỗi: {str(e)}"
 

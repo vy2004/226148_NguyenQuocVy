@@ -1011,15 +1011,16 @@ def show_admin_page():
                     st.error(msg)
 
     with tab5:
-        st.subheader("Thống kê RAG & Tái lập chỉ mục")
+        st.subheader("Thống kê RAG & Đồng bộ chỉ mục")
         stats = get_rag_stats()
         if stats.get("error"):
             st.warning(stats["error"])
         else:
             st.metric("Tổng số chunks", stats.get("total_chunks", 0))
             st.caption(f"Collection: {stats.get('collection_name')} | Thư mục: {stats.get('persist_dir', '')}")
-        if st.button("Tái lập chỉ mục Vector DB (ChromaDB)", type="primary"):
-            with st.spinner("Đang đọc PDF, chia đoạn và index..."):
+        st.caption("Nút bên dưới chỉ index tài liệu mới, bỏ qua tài liệu/chunks đã có để chạy nhanh hơn.")
+        if st.button("Đồng bộ chỉ mục (chỉ tài liệu mới)", type="primary"):
+            with st.spinner("Đang đồng bộ tài liệu mới vào ChromaDB..."):
                 ok, msg = reindex_all()
             if ok:
                 st.success(msg)
