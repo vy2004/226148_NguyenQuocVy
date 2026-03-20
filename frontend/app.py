@@ -1017,10 +1017,9 @@ def show_admin_page():
             st.warning(stats["error"])
         else:
             st.metric("Tổng số chunks", stats.get("total_chunks", 0))
-            st.caption(f"Collection: {stats.get('collection_name')} | Thư mục: {stats.get('persist_dir', '')}")
-        st.caption("Nút bên dưới chỉ index tài liệu mới, bỏ qua tài liệu/chunks đã có để chạy nhanh hơn.")
-        if st.button("Đồng bộ chỉ mục (chỉ tài liệu mới)", type="primary"):
-            with st.spinner("Đang đồng bộ tài liệu mới vào ChromaDB..."):
+        st.caption("Index tài liệu mới")
+        if st.button("Cập nhật tài liệu mới"):
+            with st.spinner("Đang đồng bộ tài liệu mới vào"):
                 ok, msg = reindex_all()
             if ok:
                 st.success(msg)
@@ -1134,7 +1133,7 @@ with st.sidebar:
 
     # Logout button
     st.markdown('<div class="logout-btn">', unsafe_allow_html=True)
-    if st.button("🚪 Đăng xuất", key="logout_btn", use_container_width=True):
+    if st.button("Đăng xuất", key="logout_btn", use_container_width=True):
         for key in ["user", "conversations", "current_conv_id", "uploaded_pdf_text", "uploaded_pdf_name"]:
             if key in st.session_state:
                 del st.session_state[key]
