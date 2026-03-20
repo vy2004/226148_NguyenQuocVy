@@ -7,6 +7,8 @@ import os
 import sys
 import chromadb
 from typing import List, Dict
+
+import torch
 from sentence_transformers import SentenceTransformer
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if ROOT_DIR not in sys.path:
@@ -32,7 +34,17 @@ class E5EmbeddingFunction:
 
     def __init__(self, model_name: str = EMBEDDING_MODEL):
         print(f"[Embedding] Loading model: {model_name} ...")
-        self._model = SentenceTransformer(model_name)
+        # Tránh lỗi PyTorch (HF Space / torch mới): "Cannot copy out of meta tensor"
+        # khi transformers dùng meta device + .to(device).
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        self._model = SentenceTransformer(
+            model_name,
+            device=device,
+            model_kwargs={
+                "low_cpu_mem_usage": False,
+                "trust_remote_code": False,
+            },
+        )
         self._mode = "query"  # Mặc định là query (search)
         print(f"[Embedding] ✅ Model loaded ({self._model.get_sentence_embedding_dimension()} dims)")
 
