@@ -1058,6 +1058,8 @@ def process_uploaded_pdf(uploaded_file, user_id=None) -> dict:
         documents = [{"content": text.strip(), "source": filename}]
         chunks_added = add_new_documents(documents)
         print(f"[PDF] ✅ Indexed {chunks_added} chunks from {filename}")
+        global _source_cache
+        _source_cache = None
 
         if user_id:
             ma_tai_lieu = str(uuid.uuid4())
@@ -1074,6 +1076,7 @@ def process_uploaded_pdf(uploaded_file, user_id=None) -> dict:
             "filename": filename,
             "text": text,
             "chunks_count": chunks_added,
+            "already_indexed": False,
         }
 
     except Exception as e:

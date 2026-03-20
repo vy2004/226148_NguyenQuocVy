@@ -17,6 +17,8 @@ from backend import db
 from backend.auth import is_admin
 from backend.runtime_paths import PDF_DIR
 from backend.db_sync import schedule_pdf_upload, schedule_pdf_delete, schedule_vector_sync
+from data_processing.dynamic_indexing import add_pdf_file
+from data_processing.indexing import delete_chunks_by_source
 
 
 # ======================== UserService ========================
@@ -109,8 +111,10 @@ def create_system_doc(file_path: str, filename: str = None) -> tuple[bool, str]:
         else:
             shutil.copy2(file_path, dest)
         db.insert_tai_lieu_he_thong(ma_tai_lieu=ma, ten_file=filename, duong_dan=os.path.abspath(dest))
+        # Index ngay sau khi upload để hỏi đáp dùng được luôn.
+        chunks_added = add_pdf_file(dest)
         schedule_pdf_upload(dest, filename)
-        return True, "Đã thêm tài liệu. Hãy chạy 'Tái lập chỉ mục' để cập nhật RAG."
+        return True, f"Đã thêm tài liệu và index {chunks_added} chunks."
     except Exception as e:
         return False, str(e)
 
@@ -133,8 +137,15 @@ def update_system_doc(ma_tai_lieu: str, file_path: str = None, ten_file: str = N
             return False, str(e)
     # Cập nhật tên trong DB nếu đổi tên (cần hàm update trong db - hiện chỉ có insert upsert)
     db.insert_tai_lieu_he_thong(ma_tai_lieu=ma_tai_lieu, ten_file=new_name, duong_dan=old_path)
+    # Khi thay file, cần cập nhật vector ngay để tránh dùng dữ liệu cũ.
+    if file_path:
+        delete_chunks_by_source(new_name)
+        chunks_added = add_pdf_file(old_path)
+        msg = f"Đã cập nhật và index lại {chunks_added} chunks."
+    else:
+        msg = "Đã cập nhật metadata tài liệu."
     schedule_pdf_upload(old_path, new_name)
-    return True, "Đã cập nhật. Chạy 'Tái lập chỉ mục' nếu đã thay file."
+    return True, msg
 
 
 def delete_system_doc(ma_tai_lieu: str) -> tuple[bool, str]:

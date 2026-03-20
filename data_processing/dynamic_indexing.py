@@ -70,19 +70,46 @@ def add_new_documents(documents: list) -> int:
 
     batch_size = 500
     total = len(documents_list)
+    skipped_existing = 0
+    inserted_new = 0
     for start in range(0, total, batch_size):
         end = min(start + batch_size, total)
+        batch_ids = ids_list[start:end]
+        existing = collection.get(ids=batch_ids, include=[])
+        existing_ids = set(existing.get("ids", []) if existing else [])
+
+        filtered_docs = []
+        filtered_metas = []
+        filtered_ids = []
+        for doc, meta, chunk_id in zip(
+            documents_list[start:end],
+            metadatas_list[start:end],
+            batch_ids,
+        ):
+            if chunk_id in existing_ids:
+                skipped_existing += 1
+                continue
+            filtered_docs.append(doc)
+            filtered_metas.append(meta)
+            filtered_ids.append(chunk_id)
+
+        if not filtered_ids:
+            continue
+
         collection.upsert(
-            documents=documents_list[start:end],
-            metadatas=metadatas_list[start:end],
-            ids=ids_list[start:end],
+            documents=filtered_docs,
+            metadatas=filtered_metas,
+            ids=filtered_ids,
         )
+        inserted_new += len(filtered_ids)
 
     embedding_fn.set_mode("query")
 
-    print(f"✅ Đã thêm {total} chunks mới vào ChromaDB")
+    print(f"✅ Đã thêm {inserted_new} chunks mới vào ChromaDB")
+    if skipped_existing:
+        print(f"⏭️ Bỏ qua {skipped_existing} chunks đã tồn tại")
     print(f"📊 Tổng chunks hiện tại: {collection.count()}")
-    return total
+    return inserted_new
 
 
 def add_pdf_file(filepath: str) -> int:

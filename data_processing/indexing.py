@@ -157,10 +157,9 @@ def create_vector_database(chunks: List[Dict]):
         print("❌ Không có chunks để index!")
         return
 
+    collection = get_collection()
     embedding_fn = get_embedding_function()
     embedding_fn.set_mode("passage")
-
-    collection = get_collection()
 
     documents = []
     metadatas = []
@@ -191,19 +190,46 @@ def create_vector_database(chunks: List[Dict]):
 
     batch_size = 500
     total = len(documents)
+    skipped_existing = 0
+    inserted_new = 0
 
     for start in range(0, total, batch_size):
         end = min(start + batch_size, total)
+        batch_ids = ids[start:end]
+        existing = collection.get(ids=batch_ids, include=[])
+        existing_ids = set(existing.get("ids", []) if existing else [])
+
+        filtered_docs = []
+        filtered_metas = []
+        filtered_ids = []
+        for doc, meta, chunk_id in zip(
+            documents[start:end],
+            metadatas[start:end],
+            batch_ids,
+        ):
+            if chunk_id in existing_ids:
+                skipped_existing += 1
+                continue
+            filtered_docs.append(doc)
+            filtered_metas.append(meta)
+            filtered_ids.append(chunk_id)
+
+        if not filtered_ids:
+            continue
+
         collection.upsert(
-            documents=documents[start:end],
-            metadatas=metadatas[start:end],
-            ids=ids[start:end]
+            documents=filtered_docs,
+            metadatas=filtered_metas,
+            ids=filtered_ids
         )
-        print(f"  ✅ Đã index {end}/{total} chunks")
+        inserted_new += len(filtered_ids)
+        print(f"  ✅ Đã index mới {inserted_new}/{total} chunks")
 
     embedding_fn.set_mode("query")
 
-    print(f"\n✅ Tổng cộng {total} chunks đã được index vào ChromaDB")
+    print(f"\n✅ Tổng cộng {inserted_new} chunks mới đã được index vào ChromaDB")
+    if skipped_existing:
+        print(f"⏭️ Bỏ qua {skipped_existing} chunks đã tồn tại")
     print(f"📁 Dữ liệu lưu tại: {CHROMA_PERSIST_DIR}")
     print(f"🧠 Embedding model: {EMBEDDING_MODEL}")
 
@@ -215,6 +241,8 @@ def search(query: str, top_k: int = 5, max_distance: float = 0.8) -> List[Dict]:
     max_distance: ngưỡng tối đa, chỉ trả về kết quả có distance < max_distance.
     """
     collection = get_collection()
+    # Đảm bảo query luôn dùng đúng prefix "query: "
+    get_embedding_function().set_mode("query")
 
     if collection.count() == 0:
         print("[Search] ⚠️ Database rỗng! Chạy run_pipeline.py trước.")
