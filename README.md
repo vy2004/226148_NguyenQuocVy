@@ -29,13 +29,11 @@ Chatbot hỏi đáp về lịch sử Việt Nam sử dụng kỹ thuật **RAG (
 | Backend chat | `backend/rag_chain_pg.py` |
 | API bổ trợ | FastAPI (`backend/api.py`) |
 | Vector DB | ChromaDB persistent tại `data/csdl_vector/` |
-| Embedding | `intfloat/multilingual-e5-base` |
+| Embedding | `intfloat/multilingual-e5-base` (prefix E5: `query:` / `passage:`) |
 | LLM chính | Groq `llama-3.3-70b-versatile` |
 | LLM dự phòng | Gemini `2.5-flash` → `2.0-flash` → `2.0-flash-lite` |
 | CSDL quan hệ | SQLite tại `data/chatbot.db` |
-| Nguồn dữ liệu | PDF lịch sử + Wikipedia tiếng Việt (fallback) |
-
----
+| Nguồn dữ liệu | PDF lịch sử + Wikipedia tiếng Việt (fallback tự động) |
 
 ---
 
@@ -44,49 +42,60 @@ Chatbot hỏi đáp về lịch sử Việt Nam sử dụng kỹ thuật **RAG (
 ### 1. Hỏi đáp RAG
 
 - Nhận câu hỏi từ giao diện hoặc API.
-- Phát hiện câu hỏi tiếp nối (follow-up) để giữ context theo session.
-- Tìm ngữ cảnh liên quan trong ChromaDB bằng embedding E5.
-- Gọi Groq làm LLM chính, tự động fallback sang Gemini khi cần.
-- Extractive fallback khi cả hai LLM đều lỗi.
-- Bổ sung ngữ cảnh từ Wikipedia khi kho PDF chưa đủ thông tin.
+- Phát hiện câu hỏi tiếp nối (follow-up) để giữ context theo session — nhận diện qua từ chỉ thị ("sự kiện này", "chi tiết hơn", ...) và câu hỏi ngắn không chứa danh từ riêng.
+- Tìm ngữ cảnh liên quan trong ChromaDB bằng embedding E5 (cosine similarity).
+- Ưu tiên nguồn trùng tên file (source-priority) và keyword boosting khi xếp hạng kết quả.
+- Gọi Groq làm LLM chính, tự động fallback sang chuỗi Gemini (`2.5-flash` → `2.0-flash` → `2.0-flash-lite`) khi gặp lỗi hoặc rate-limit.
+- Extractive fallback: trích xuất dòng liên quan nhất từ context khi cả hai LLM đều lỗi.
+- Bổ sung ngữ cảnh từ Wikipedia khi kho PDF chưa đủ thông tin — tự động crawl, làm sạch, và lưu chunk vào ChromaDB để lần sau không cần crawl lại.
 
 ### 2. Quản lý tài liệu PDF
 
-- Upload PDF trực tiếp trên giao diện Streamlit.
-- Tóm tắt nhanh nội dung file vừa tải lên.
-- **Kiểm tra trùng lặp trước khi index**: hệ thống tự động kiểm tra tài liệu đã được index chưa, nếu đã index thì bỏ qua để tránh mất thời gian.
+- Upload PDF trực tiếp trên giao diện Streamlit (tối đa 200 MB).
+- Tóm tắt nhanh nội dung file vừa tải lên bằng LLM.
+- **Index tăng dần (incremental)**: hệ thống tự động kiểm tra tài liệu đã được index chưa (`is_document_indexed()`), nếu đã có thì bỏ qua — tránh mất thời gian re-embed.
 - ID chunk ổn định theo tên nguồn (`tenfile__chunk_0`, `tenfile__chunk_1`, ...) tránh ghi đè giữa các tài liệu.
-- Admin có thể thêm/xóa tài liệu hệ thống và tái lập chỉ mục.
-- Hỗ trợ index offline từ thư mục `data/pdf/`.
+- Xóa chunk theo tên file (`delete_chunks_by_source()`) khi cần index lại 1 tài liệu cụ thể.
+- Admin có thể thêm/xóa tài liệu hệ thống và đồng bộ chỉ mục (chỉ tài liệu mới).
+- Hỗ trợ index offline từ thư mục `data/pdf/` qua `run_pipeline.py`.
 
 ### 3. Quản lý người dùng và phân quyền
 
-- Đăng ký, đăng nhập, đăng xuất.
-- Quên mật khẩu qua OTP gửi email thật bằng Resend API.
+- Đăng ký, đăng nhập, đăng xuất. Chỉ chấp nhận email `@gmail.com`.
+- Quên mật khẩu qua OTP 6 chữ số gửi email thật bằng Resend API (hết hạn sau 15 phút).
+- Mật khẩu mã hóa SHA-256 + salt.
 - Phân quyền `user` / `admin`.
-- Admin bootstrap: email admin được cấu hình sẵn trong code hoặc qua biến môi trường `ADMIN_EMAILS`.
+- Admin bootstrap: email admin được cấu hình sẵn trong `admin_config.py` hoặc qua biến môi trường `ADMIN_EMAILS`.
 - Admin có thể đổi vai trò và khóa/mở khóa tài khoản người dùng.
 
 ### 4. Quản lý hội thoại và phản hồi
 
 - Tạo nhiều cuộc trò chuyện, tự động đặt tiêu đề từ câu hỏi đầu tiên.
-- Lưu lịch sử hỏi đáp và nguồn tham khảo cho từng câu trả lời.
+- Lưu lịch sử hỏi đáp và nguồn tham khảo cho từng câu trả lời (bảng `tin_nhan_tham_khao`).
 - Người dùng đánh giá 👍/👎 và gửi phản hồi chi tiết.
-- Admin xem lịch sử hỏi đáp toàn hệ thống và quản lý phản hồi.
+- Admin xem lịch sử hỏi đáp toàn hệ thống và quản lý phản hồi (trạng thái: mới / đã xem / đóng).
 
 ### 5. Trang quản trị (Admin)
 
 - Quản lý người dùng: xem danh sách, đổi vai trò, khóa/mở khóa.
 - Lịch sử hỏi đáp toàn hệ thống.
 - Phản hồi người dùng: xem và cập nhật trạng thái xử lý.
-- Tài liệu hệ thống: thêm/xóa PDF, tái lập chỉ mục ChromaDB.
+- Tài liệu hệ thống: thêm/xóa PDF, đồng bộ chỉ mục ChromaDB (incremental).
 - Thống kê RAG: số chunks, collection info.
 
-### 6. API cơ bản
+### 6. Đồng bộ dữ liệu lên HF Dataset
+
+- Tự động đồng bộ `chatbot.db` lên HF Dataset repo sau mỗi thao tác ghi (rate-limited 30s).
+- Đồng bộ file PDF (`schedule_pdf_upload`, `schedule_pdf_delete`).
+- Đồng bộ vector store (`schedule_vector_sync`) — upload toàn bộ `csdl_vector/`.
+- Cập nhật `manifest.json` trên dataset repo để kiểm soát phiên bản.
+
+### 7. API cơ bản
 
 - `GET /` — kiểm tra trạng thái server.
-- `POST /chat` — gửi câu hỏi và nhận câu trả lời.
+- `POST /chat` — gửi câu hỏi và nhận câu trả lời (hỗ trợ `session_id`).
 - `POST /clear` — xóa context chat theo `session_id`.
+- CORS cho phép mọi origin.
 
 ---
 
@@ -105,11 +114,12 @@ RAG Engine (backend/rag_chain_pg.py)
    │
    ├── Embedding search trong ChromaDB
    ├── Follow-up detection theo session
-   ├── Groq → Gemini → Extractive fallback
-   ├── Wikipedia fallback khi cần
+   ├── Groq → Gemini (2.5-flash → 2.0-flash → 2.0-flash-lite) → Extractive fallback
+   ├── Wikipedia crawl + lưu vào ChromaDB (backend/wiki_crawler.py)
    │
    ├──▶ SQLite (backend/db.py)
    │      ├── nguoi_dung
+   │      ├── khoi_phuc_mat_khau
    │      ├── cuoc_tro_chuyen
    │      ├── tin_nhan
    │      ├── tai_lieu
@@ -118,7 +128,13 @@ RAG Engine (backend/rag_chain_pg.py)
    │
    ├──▶ ChromaDB (data/csdl_vector/)
    │
-   └──▶ PDF pipeline (data_processing/)
+   ├──▶ PDF pipeline (data_processing/)
+   │
+   └──▶ HF Dataset Sync (backend/db_sync.py)
+           ├── chatbot.db
+           ├── pdf/
+           ├── csdl_vector/
+           └── manifest.json
 ```
 
 ---
@@ -136,31 +152,29 @@ chatbot-lichsu/
 │   ├── auth.py                   # Đăng ký, đăng nhập, OTP, reset mật khẩu
 │   ├── config.py                 # Cấu hình backend (API keys, model)
 │   ├── db.py                     # SQLite schema, migration, truy vấn
-│   ├── db_sync.py                # Đồng bộ chatbot.db lên HF Dataset repo
-│   ├── email_service.py          # Gửi OTP qua Resend API
+│   ├── db_sync.py                # Đồng bộ DB/PDF/vector lên HF Dataset repo
+│   ├── email_service.py          # Gửi OTP qua Resend API (HTTP)
 │   ├── rag_chain_pg.py           # RAG engine chính
 │   ├── runtime_paths.py          # Quản lý đường dẫn runtime (local / Space)
-│   └── wiki_crawler.py           # Bổ sung dữ liệu từ Wikipedia
+│   └── wiki_crawler.py           # Crawl Wikipedia + lưu vào ChromaDB
 ├── data/
 │   ├── chatbot.db                # SQLite database (runtime)
 │   ├── csdl_vector/              # ChromaDB persistent storage
 │   ├── pdf/                      # File PDF nguồn
-│   └── processed/                # Dữ liệu xử lý trung gian
+│   └── processed/                # Dữ liệu xử lý trung gian (chunks JSON)
 ├── data_processing/
-│   ├── chunking.py               # Chia đoạn văn bản
+│   ├── chunking.py               # Chia đoạn văn bản (800 chars, overlap 200)
 │   ├── dynamic_indexing.py       # Index tăng dần, kiểm tra trùng lặp
 │   ├── indexing.py               # Vector DB: index, search, kiểm tra trùng, xóa theo nguồn
-│   ├── loader.py                 # Đọc PDF
+│   ├── loader.py                 # Đọc PDF (pypdf)
 │   └── run_pipeline.py           # Pipeline index offline (chỉ index tài liệu mới)
 ├── frontend/
-│   └── app.py                    # Giao diện Streamlit
+│   └── app.py                    # Giao diện Streamlit (chat, auth, admin, feedback)
 ├── scripts/
 │   ├── bootstrap_space_data.py   # Tải dataset runtime cho HF Space
 │   ├── export_dataset_bundle.py  # Xuất bundle dữ liệu cho dataset repo
-│   ├── pull_remote_db.py         # Kéo chatbot.db mới nhất từ dataset repo về local
-│   ├── start_space.py            # Entrypoint cho HF Space
-│   └── watch_remote_db.py        # Theo dõi thay đổi DB gần realtime (60s/lần)
-├── Dockerfile                    # Docker build cho HF Space
+│   └── start_space.py            # Entrypoint cho HF Space
+├── Dockerfile                    # Docker build cho HF Space (python:3.11-slim)
 ├── requirements.txt
 └── README.md
 ```
@@ -174,7 +188,7 @@ chatbot-lichsu/
 | Bảng | Mô tả |
 |---|---|
 | `nguoi_dung` | Thông tin tài khoản, vai trò (`user`/`admin`), trạng thái khóa |
-| `khoi_phuc_mat_khau` | OTP đặt lại mật khẩu |
+| `khoi_phuc_mat_khau` | OTP đặt lại mật khẩu (6 chữ số, hết hạn 15 phút) |
 | `cuoc_tro_chuyen` | Metadata mỗi cuộc trò chuyện |
 | `tin_nhan` | Nội dung hỏi đáp, nguồn tham khảo, đánh giá |
 | `tai_lieu` | Tài liệu người dùng và tài liệu hệ thống |
@@ -188,6 +202,9 @@ chatbot-lichsu/
 | Collection | `lich_su_viet_nam` |
 | Embedding | `intfloat/multilingual-e5-base` |
 | Metric | Cosine similarity |
+| Chunk ID | `{source}__chunk_{i}` |
+| Max chunks/query | 20 |
+| Max context chars | 20,000 |
 
 ---
 
@@ -198,7 +215,9 @@ chatbot-lichsu/
 ```text
 PDF → loader.py → kiểm tra đã index chưa (get_indexed_sources)
   ├── Đã index → bỏ qua
-  └── Chưa index → chunking.py → indexing.py (ID: source__chunk_i) → ChromaDB
+  └── Chưa index → chunking.py (800 chars, overlap 200)
+        → indexing.py (ID: source__chunk_i)
+        → kiểm tra trùng ID trong batch → upsert ChromaDB
 ```
 
 - `run_pipeline.py`: lọc bỏ tài liệu đã index trước khi xử lý, chỉ index tài liệu mới.
@@ -208,13 +227,25 @@ PDF → loader.py → kiểm tra đã index chưa (get_indexed_sources)
 ### Hỏi đáp
 
 ```text
-Câu hỏi → ask_pg() → embedding search → tạo prompt → Groq / Gemini → lưu lịch sử + nguồn tham khảo
+Câu hỏi → ask_pg()
+  → follow-up detection (nếu có → kết hợp topic trước + câu hỏi mới)
+  → embedding search ChromaDB (source-priority + keyword boosting)
+  → tạo prompt
+  → Groq LLM
+    ├── Thành công → trả lời
+    └── Lỗi/rate-limit → Gemini (2.5-flash → 2.0-flash → 2.0-flash-lite)
+        └── Tất cả lỗi → Extractive fallback
+  → lưu lịch sử + nguồn tham khảo vào SQLite
 ```
 
-### Fallback
+### Wikipedia fallback
 
 ```text
-Không đủ thông tin từ PDF → tìm/crawl Wikipedia → thêm ngữ cảnh → sinh câu trả lời mới
+Câu trả lời "không đủ thông tin"
+  → crawl Wikipedia tiếng Việt (wiki_crawler.py)
+  → làm sạch HTML (BeautifulSoup)
+  → thêm ngữ cảnh mới → hỏi lại LLM
+  → lưu chunks vào ChromaDB (lần sau không cần crawl lại)
 ```
 
 ---
@@ -253,6 +284,8 @@ RESEND_FROM_EMAIL=no-reply@yourdomain.com
 python data_processing/run_pipeline.py
 ```
 
+Pipeline sẽ tự động bỏ qua các file đã được index trước đó.
+
 ### 4. Chạy giao diện Streamlit
 
 ```bash
@@ -277,16 +310,18 @@ Project đã được triển khai tại: [https://huggingface.co/spaces/NguyenQ
 
 Cấu hình triển khai:
 
-- **SDK**: Docker
+- **SDK**: Docker (`python:3.11-slim`, non-root user)
 - **Entrypoint**: `scripts/start_space.py` → bootstrap dataset → chạy Streamlit trên port 7860
 - **Dataset runtime**: tải từ HF Dataset repo qua `scripts/bootstrap_space_data.py`
 
-Biến môi trường cần cấu hình trên Space:
+### Biến môi trường trên Space
 
 | Biến | Bắt buộc | Mô tả |
 |---|---|---|
 | `GROQ_API_KEY` | Có | API key Groq |
+| `GROQ_MODEL` | Không | Model Groq (mặc định `llama-3.3-70b-versatile`) |
 | `GEMINI_API_KEY` | Có | API key Gemini (fallback) |
+| `GEMINI_MODEL` | Không | Model Gemini (mặc định `gemini-2.5-flash`) |
 | `RESEND_API_KEY` | Có (nếu dùng quên mật khẩu) | API key gửi email qua Resend |
 | `RESEND_FROM_EMAIL` | Có (nếu dùng quên mật khẩu) | Email người gửi (đã verify domain trong Resend) |
 | `HF_DATASET_REPO` | Khuyên dùng | Repo chứa dataset runtime và chatbot.db |
@@ -298,19 +333,12 @@ Biến môi trường cần cấu hình trên Space:
 
 ### Đồng bộ dữ liệu bền vững trên HF
 
-- Khi Space khởi động: `scripts/bootstrap_space_data.py` tải `chatbot.db` mới nhất từ dataset repo.
-- Khi có thao tác ghi dữ liệu: `backend/db_sync.py` tự đồng bộ DB ngược lên dataset repo theo chu kỳ (rate-limit).
-- Local có thể kéo DB mới nhất về bằng:
-
-```bash
-python scripts/pull_remote_db.py --repo-id <hf_dataset_repo>
-```
-
-- Hoặc theo dõi gần realtime mỗi 60s:
-
-```bash
-python scripts/watch_remote_db.py --repo-id <hf_dataset_repo> --interval 60
-```
+- Khi Space khởi động: `scripts/bootstrap_space_data.py` tải `chatbot.db`, `csdl_vector/`, `pdf/` từ dataset repo. Bỏ qua nếu local manifest đã khớp remote (trừ khi `HF_DATASET_FORCE_SYNC=1`).
+- Khi có thao tác ghi dữ liệu: `backend/db_sync.py` tự đồng bộ ngược lên dataset repo:
+  - `chatbot.db` — rate-limited 30 giây.
+  - File PDF — upload/xóa theo thao tác admin.
+  - `csdl_vector/` — sau khi reindex hoặc thêm tài liệu.
+  - `manifest.json` — cập nhật metadata mỗi lần sync.
 
 ---
 
@@ -318,18 +346,20 @@ python scripts/watch_remote_db.py --repo-id <hf_dataset_repo> --interval 60
 
 | Công nghệ | Vai trò |
 |---|---|
-| Python | Ngôn ngữ chính |
+| Python 3.11 | Ngôn ngữ chính |
 | Streamlit | Giao diện người dùng |
 | FastAPI + Uvicorn | API backend |
 | ChromaDB | Vector database |
 | SQLite | Lưu dữ liệu quan hệ |
-| Sentence Transformers | Embedding E5 |
-| Groq API | LLM chính |
-| Google Gemini API | LLM dự phòng |
+| Sentence Transformers | Embedding E5 (`intfloat/multilingual-e5-base`) |
+| Groq API | LLM chính (Llama 3.3 70B) |
+| Google Gemini API | LLM dự phòng (chuỗi 3 model) |
 | LangChain Text Splitters | Chunking văn bản |
 | pypdf | Đọc PDF |
 | BeautifulSoup + requests | Crawl / làm sạch Wikipedia |
+| Resend API | Gửi email OTP |
 | Docker | Triển khai trên HF Space |
+| Hugging Face Hub | Đồng bộ dataset runtime |
 
 ---
 
