@@ -1,6 +1,8 @@
 [server]
 enableXsrfProtection = false
 maxUploadSize = 200
+# Tránh lỗi PyTorch khi Streamlit quét import: "torch.classes ... does not exist"
+fileWatcherType = "none"
 
 [theme]
 base = "light"
