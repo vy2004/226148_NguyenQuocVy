@@ -17,7 +17,7 @@ Chatbot hỏi đáp về lịch sử Việt Nam sử dụng kỹ thuật **RAG (
 > **Github**: [https://vy2004.github.io/] **Hugging Face Space**: (https://huggingface.co/spaces/NguyenQuocVy2004/chatbot-lichsu)
 >
 > Truy cập link trên để sử dụng chatbot trực tiếp trên trình duyệt mà không cần cài đặt.
-
+> Link Video Demo dự án: [https://drive.google.com/drive/folders/1m1LDyNg1uEggxRNb6YpxEEvp85VXhJC9?usp=drive_link]
 ---
 
 ## Tổng quan
