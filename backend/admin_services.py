@@ -21,6 +21,18 @@ from data_processing.dynamic_indexing import add_pdf_file
 from data_processing.indexing import delete_chunks_by_source
 
 
+# ======================== RAG Cache Reset ========================
+
+def _clear_rag_cache():
+    """Reset cache RAG để cập nhật danh sách tài liệu mới sau khi thêm/sửa/xóa."""
+    try:
+        from backend import rag_chain_pg
+        rag_chain_pg._source_cache = None
+        print("[Admin] ✅ Đã clear RAG source cache")
+    except Exception as e:
+        print(f"[Admin] ⚠️ Lỗi clear cache: {e}")
+
+
 # ======================== UserService ========================
 
 def list_users(limit: int = 500) -> list:
@@ -114,6 +126,8 @@ def create_system_doc(file_path: str, filename: str = None) -> tuple[bool, str]:
         # Index ngay sau khi upload để hỏi đáp dùng được luôn.
         chunks_added = add_pdf_file(dest)
         schedule_pdf_upload(dest, filename)
+        # Clear cache để tài liệu mới có thể được search ngay lập tức
+        _clear_rag_cache()
         return True, f"Đã thêm tài liệu và index {chunks_added} chunks."
     except Exception as e:
         return False, str(e)
@@ -145,6 +159,8 @@ def update_system_doc(ma_tai_lieu: str, file_path: str = None, ten_file: str = N
     else:
         msg = "Đã cập nhật metadata tài liệu."
     schedule_pdf_upload(old_path, new_name)
+    # Clear cache để cập nhật được phản ánh ngay
+    _clear_rag_cache()
     return True, msg
 
 
@@ -206,6 +222,8 @@ def reindex_all() -> tuple[bool, str]:
                 skipped_docs += 1
 
         schedule_vector_sync()
+        # Clear cache sau khi reindex để search ngay được tài liệu mới
+        _clear_rag_cache()
         return True, (
             f"Đồng bộ xong: thêm mới {indexed_docs} tài liệu / {indexed_chunks} chunks, "
             f"bỏ qua {skipped_docs} tài liệu đã có."
