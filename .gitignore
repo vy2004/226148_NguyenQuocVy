@@ -5,6 +5,7 @@ __pycache__/
 
 # Runtime data (generated at runtime, not part of source)
 data/
+!data/pdf/
 .tmp_app_data/
 
 # Environment
