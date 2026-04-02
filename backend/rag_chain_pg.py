@@ -54,7 +54,7 @@ GEMINI_FALLBACK_MODELS = [
 ]
 
 MAX_TOTAL_CHUNKS = 20
-MAX_CONTEXT_CHARS = 20000
+MAX_CONTEXT_CHARS = 8000
 MAX_HISTORY_TURNS = 2
 
 # Fallback: đọc trực tiếp từ .env nếu load_dotenv thất bại
@@ -361,7 +361,7 @@ def _call_groq(messages: list) -> str:
         model=GROQ_MODEL,
         messages=messages,
         temperature=0.3,
-        max_tokens=2048,
+        max_tokens=8192,
         top_p=0.9,
     )
     choice = response.choices[0]
@@ -403,7 +403,7 @@ def _call_gemini(messages: list) -> str:
             else:
                 gen_config = {
                     "temperature": 0.3,
-                    "max_output_tokens": 2048,
+                    "max_output_tokens": 8192,
                 }
 
             model = genai.GenerativeModel(model_name)
