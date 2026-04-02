@@ -134,12 +134,17 @@ def create_system_doc(file_path: str, filename: str = None) -> tuple[bool, str]:
 
 
 def update_system_doc(ma_tai_lieu: str, file_path: str = None, ten_file: str = None) -> tuple[bool, str]:
-    """Cập nhật tài liệu hệ thống (metadata hoặc thay file)."""
+    """
+    Cập nhật tài liệu hệ thống (metadata hoặc thay file).
+    Nếu thay file: xóa chunks cũ → add chunks mới.
+    """
     docs = [r for r in list_system_docs() if r.get("ma_tai_lieu") == ma_tai_lieu]
     if not docs:
         return False, "Không tìm thấy tài liệu"
     old_path = docs[0].get("duong_dan")
+    old_filename = docs[0].get("ten_file")  # Tên file cũ (để xóa chunks cũ)
     new_name = ten_file or (os.path.basename(file_path) if file_path else docs[0]["ten_file"])
+    
     if file_path and os.path.exists(old_path):
         try:
             if hasattr(file_path, "read"):
@@ -149,37 +154,63 @@ def update_system_doc(ma_tai_lieu: str, file_path: str = None, ten_file: str = N
                 shutil.copy2(file_path, old_path)
         except Exception as e:
             return False, str(e)
-    # Cập nhật tên trong DB nếu đổi tên (cần hàm update trong db - hiện chỉ có insert upsert)
+    
+    # Cập nhật tên trong DB (upsert)
     db.insert_tai_lieu_he_thong(ma_tai_lieu=ma_tai_lieu, ten_file=new_name, duong_dan=old_path)
-    # Khi thay file, cần cập nhật vector ngay để tránh dùng dữ liệu cũ.
+    
+    # Khi thay file, cần cập nhật vector ngay để tránh dùng dữ liệu cũ
     if file_path:
-        delete_chunks_by_source(new_name)
+        # Xóa chunks của file cũ trước
+        deleted_chunks = delete_chunks_by_source(old_filename)
+        print(f"[Admin] Deleted {deleted_chunks} old chunks for {old_filename}")
+        # Add chunks của file mới
         chunks_added = add_pdf_file(old_path)
-        msg = f"Đã cập nhật và index lại {chunks_added} chunks."
+        msg = f"Đã cập nhật và index lại {chunks_added} chunks (xóa {deleted_chunks} chunks cũ)."
     else:
         msg = "Đã cập nhật metadata tài liệu."
+    
     schedule_pdf_upload(old_path, new_name)
+    
     # Clear cache để cập nhật được phản ánh ngay
     _clear_rag_cache()
     return True, msg
 
 
 def delete_system_doc(ma_tai_lieu: str) -> tuple[bool, str]:
-    """Xóa tài liệu hệ thống: xóa file (nếu có) và xóa bản ghi DB."""
+    """
+    Xóa tài liệu hệ thống: xóa chunks từ ChromaDB, xóa file, và xóa bản ghi DB.
+    Cập nhật tài liệu + chunks đồng bộ.
+    """
     docs = [r for r in list_system_docs() if r.get("ma_tai_lieu") == ma_tai_lieu]
     if not docs:
         return False, "Không tìm thấy tài liệu"
     path = docs[0].get("duong_dan")
     filename = docs[0].get("ten_file") or (os.path.basename(path) if path else "")
+    
+    deleted_chunks = 0
     try:
+        # 1. Xóa chunks từ ChromaDB trước
+        if filename:
+            deleted_chunks = delete_chunks_by_source(filename)
+            print(f"[Admin] Deleted {deleted_chunks} chunks for {filename}")
+        
+        # 2. Xóa file vật lý
         if path and os.path.isfile(path):
             os.remove(path)
     except OSError:
         pass
+    
+    # 3. Xóa DB record
     db.delete_tai_lieu_he_thong(ma_tai_lieu)
+    
+    # 4. Upload delete notification to HF
     if filename:
         schedule_pdf_delete(filename)
-    return True, "Đã xóa tài liệu. Chạy 'Tái lập chỉ mục' để cập nhật RAG."
+    
+    # 5. Clear RAG cache để cập nhật danh sách tài liệu + chunks
+    _clear_rag_cache()
+    
+    return True, f"Đã xóa tài liệu '{filename}' và {deleted_chunks} chunks khỏi hệ thống."
 
 
 def reindex_doc(ma_tai_lieu: str) -> tuple[bool, str]:
